@@ -8,7 +8,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - **Last completed:** B10 (coverage + gas pass; 59 tests passing in the whole suite)
 - **Next task:** B11: shared migration (blocked until A11 deploys `BatchRegistry`)
 - **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
-- **Open problems:** A02/B02 freeze waits on A confirming the B01 review; B11+ blocked on A11 (A has not finished A05–A11)
+- **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
 
 ## Tasks
@@ -18,7 +18,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ### Phase 1 — Shared interface (first, with A)
 - [x] B01 | Review A's `IBatchRegistry.sol` draft | Depends on: A01 | Done when: review written in this roadmap and given to the user for A
-- [ ] B02 | Interface frozen | Depends on: B01, A02 | Done when: A confirms and both roadmaps log "IBatchRegistry v1 frozen"
+- [x] B02 | Interface frozen | Depends on: B01, A02 | Done when: A confirms and both roadmaps log "IBatchRegistry v1 frozen"
 
 ### Phase 2 — Contracts (each task = code + tests in `test/payment/`)
 - [x] B03 | `FarmCoin`: OZ `ERC20("FarmCoin","FRM")` + `Ownable`, `mint(to, amount)` onlyOwner (market authority) | Depends on: - | Done when: name/symbol/decimals, owner mint, non-owner revert, zero-address revert tested
@@ -90,6 +90,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
+- 2026-11-03 | B02: **IBatchRegistry v1 frozen** (A confirmed; no changes) | Both developers agreed
 - 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
 
 ## Needs From The Other Person

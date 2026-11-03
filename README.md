@@ -11,7 +11,7 @@ All assets are **simulated**. There are no real goods or payments.
 | [farmy_blockchain/configuration.md](farmy_blockchain/configuration.md) | Ganache, MetaMask and Truffle setup |
 | [farmy_blockchain/roadmap-A.md](farmy_blockchain/roadmap-A.md) | Person A tasks (BatchRegistry) |
 | [manual-test-A.md](manual-test-A.md) | Person A manual test checklist (contract + UI with MetaMask) |
-| `farmy_blockchain/roadmap-B.md` | Person B tasks (FarmCoin + PriceCapEscrow) |
+| [farmy_blockchain/roadmap-B.md](farmy_blockchain/roadmap-B.md) | Person B tasks (FarmCoin + PriceCapEscrow) |
 
 ## Quick start
 
@@ -29,9 +29,9 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 |------|--------|------|
 | A00 | ✅ | Project init: toolchain, folders, Next.js app, docs |
 | A01 | ✅ | `IBatchRegistry.sol` draft |
-| A02 | ⏳ | Interface review by Person B |
+| A02 | ✅ | Interface reviewed by Person B (OK, no changes): **v1 frozen** |
 | A03–A09 | ✅ | `BatchRegistry` contract: mint, custody, checkpoints, validation, sale price |
-| A09b | ⛔ | Re-check against frozen interface (blocked: waits on A02) |
+| A09b | ✅ | Re-checked against frozen interface (90 tests in full suite) |
 | A10 | ✅ | Coverage + gas report (41 tests, `npm run test:gas`) |
 | A11 | ✅ | Registry migration (`npm run migrate`) |
 | A12 | ✅ | UI: batch list + detail with event history (`/registry`) |
@@ -45,4 +45,4 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 
 ## Progress — Person B (FarmCoin + PriceCapEscrow)
 
-See `farmy_blockchain/roadmap-B.md` (maintained by Person B).
+See [farmy_blockchain/roadmap-B.md](farmy_blockchain/roadmap-B.md) and [farmy_blockchain/test_person.md](farmy_blockchain/test_person.md).
