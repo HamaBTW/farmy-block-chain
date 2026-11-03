@@ -36,14 +36,14 @@ export function friendlyError({ name, args }: DecodedError): string {
   return message ? message(args) : `Reverted: ${name}(${args.map(String).join(", ")})`;
 }
 
-const E18 = 10n ** 18n;
+const E18 = BigInt(10) ** BigInt(18);
 const SAMPLE_ARGS: Record<string, unknown[]> = {
-  PriceAboveCap: [150n * E18, 120n * E18],
-  BatchAlreadyListed: [1n],
-  WrongState: [3n],
-  ERC20InsufficientBalance: ["0x0", 10n * E18, 115n * E18],
-  ERC721NonexistentToken: [7n],
-  UnknownBatch: [7n],
+  PriceAboveCap: [BigInt(150) * E18, BigInt(120) * E18],
+  BatchAlreadyListed: [BigInt(1)],
+  WrongState: [BigInt(3)],
+  ERC20InsufficientBalance: ["0x0", BigInt(10) * E18, BigInt(115) * E18],
+  ERC721NonexistentToken: [BigInt(7)],
+  UnknownBatch: [BigInt(7)],
 };
 
 /** One line per error, with example values, for the guide. */

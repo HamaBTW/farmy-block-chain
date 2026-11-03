@@ -18,12 +18,12 @@ test("balance error shows both amounts", () => {
 });
 
 test("wrong state names the sale state", () => {
-  assert.equal(friendlyError({ name: "WrongState", args: [3n] }), "This sale is already released.");
-  assert.equal(friendlyError({ name: "WrongState", args: [0n] }), "This sale doesn't exist.");
+  assert.equal(friendlyError({ name: "WrongState", args: [BigInt(3)] }), "This sale is already released.");
+  assert.equal(friendlyError({ name: "WrongState", args: [BigInt(0)] }), "This sale doesn't exist.");
 });
 
 test("unknown errors fall back to the raw name", () => {
-  assert.equal(friendlyError({ name: "Weird", args: [1n] }), "Reverted: Weird(1)");
+  assert.equal(friendlyError({ name: "Weird", args: [BigInt(1)] }), "Reverted: Weird(1)");
 });
 
 test("the guide table has one plain sentence per known error", () => {
