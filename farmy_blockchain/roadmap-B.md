@@ -5,10 +5,11 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B03 (`FarmCoin`; 6 tests passing, no compiler warnings)
-- **Next task:** B04: `MockBatchRegistry` in `contracts/mocks/`
+- **Last completed:** B04 (`MockBatchRegistry`; 4 tests passing)
+- **Next task:** B05: `PriceCapEscrow` skeleton + `setMaxMarkup` + `MarkupChanged`
 - **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
-- **Open problems:** A02/B02 freeze waits on A confirming the review below; refund rule (B08) needs user OK
+- **Open problems:** A02/B02 freeze waits on A confirming the review below
+- **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
 
 ## Tasks
 
@@ -21,12 +22,12 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ### Phase 2 — Contracts (each task = code + tests in `test/payment/`)
 - [x] B03 | `FarmCoin`: OZ `ERC20("FarmCoin","FRM")` + `Ownable`, `mint(to, amount)` onlyOwner (market authority) | Depends on: - | Done when: name/symbol/decimals, owner mint, non-owner revert, zero-address revert tested
-- [ ] B04 | `MockBatchRegistry` in `contracts/mocks/` implementing `IBatchRegistry` with test setters | Depends on: A01 | Done when: compiles; setters + 4 interface functions work in a small test
+- [x] B04 | `MockBatchRegistry` in `contracts/mocks/` implementing `IBatchRegistry` with test setters | Depends on: A01 | Done when: compiles; setters + 4 interface functions work in a small test
 - [ ] B05 | `PriceCapEscrow` skeleton: constructor(registry, coin, maxMarkupPercent) with zero-address checks, `Ownable` (owner = market authority), `setMaxMarkup` + `MarkupChanged`, view `maxMarkupPercent()` | Depends on: B03, B04 | Done when: deploy, setMaxMarkup happy/non-owner/event tested
 - [ ] B06 | `createSale(batchId, price)`: seller must be `custodianOf`, `price > 0`, `price <= lastPrice * (100 + markup) / 100` + `SaleCreated` | Depends on: B04 | Done when: within-cap OK, cap edge (exactly cap) OK, over-cap revert (150 vs cap 120), non-custodian and zero-price reverts, event tested
 - [ ] B07 | `deposit(saleId)`: buyer pulls `price` FRM via `SafeERC20.safeTransferFrom`, state `Created → Deposited` + `Deposited` | Depends on: B06 | Done when: balances moved, wrong state, no allowance, seller-as-buyer, unknown-sale reverts, event tested
 - [ ] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
-- [ ] B09 | `refund(saleId)` (rule in Decisions Log, needs user OK): state → `Refunded`, FRM back to buyer; `nonReentrant` + `Refunded` | Depends on: B07 | Done when: seller cancel, buyer refund while conditions unmet, buyer blocked once conditions met, double-refund and refund-after-release reverts, event tested
+- [ ] B09 | `refund(saleId)` (rule in Decisions Log, approved): state → `Refunded`, FRM back to buyer; `nonReentrant` + `Refunded` | Depends on: B07 | Done when: seller cancel, buyer refund while conditions unmet, buyer blocked once conditions met, double-refund and refund-after-release reverts, event tested
 - [ ] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
@@ -57,7 +58,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | `test/payment/helpers.js` is B's own copy of the custom-error `expectRevert` (same approach as A's) | Don't depend on files B doesn't own
 - 2026-11-03 | Planned: `Sale { address seller; SaleState state; uint64 batchId; address buyer; uint96 price; }` = 2 slots; buyer is whoever deposits | Fewer SSTOREs; idea1's `createSale` has no buyer param
 - 2026-11-03 | Planned: `createSale` requires `msg.sender == custodianOf(batchId)` | Otherwise anyone could list goods they don't hold
-- 2026-11-03 | Proposed (needs user OK before B09): `refund` = seller may cancel any time before release; buyer may refund only while release conditions are not met | Stops a buyer from keeping goods and money after delivery
+- 2026-11-03 | Approved by user: `refund` = seller may cancel any time before release; buyer may refund only while release conditions are not met | Stops a buyer from keeping goods and money after delivery
+- 2026-11-03 | B04: mock reverts `UnknownBatch` for a batch with no custodian and only lets the set escrow call `recordSalePrice` | Behaves like the interface promises, so escrow tests stay valid against the real registry
 - 2026-11-03 | Escrow default max markup 20% in the migration | idea1 §7 example (100 → cap 120)
 
 ## Needs From The Other Person
