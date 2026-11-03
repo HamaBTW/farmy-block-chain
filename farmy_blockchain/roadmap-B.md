@@ -5,10 +5,10 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B09 (`refund`; 39 escrow tests passing)
-- **Next task:** B10: coverage + gas pass
+- **Last completed:** B10 (coverage + gas pass; 59 tests passing in the whole suite)
+- **Next task:** B11: shared migration (blocked until A11 deploys `BatchRegistry`)
 - **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
-- **Open problems:** A02/B02 freeze waits on A confirming the review below
+- **Open problems:** A02/B02 freeze waits on A confirming the B01 review; B11+ blocked on A11 (A has not finished A05–A11)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
 
 ## Tasks
@@ -28,10 +28,10 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B07 | `deposit(saleId)`: buyer pulls `price` FRM via `SafeERC20.safeTransferFrom`, state `Created → Deposited` + `Deposited` | Depends on: B06 | Done when: balances moved, wrong state, no allowance, seller-as-buyer, unknown-sale reverts, event tested
 - [x] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
 - [x] B09 | `refund(saleId)` (rule in Decisions Log, approved): state → `Refunded`, FRM back to buyer; `nonReentrant` + `Refunded` | Depends on: B07 | Done when: seller cancel, buyer refund while conditions unmet, buyer blocked once conditions met, double-refund and refund-after-release reverts, event tested
-- [ ] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
+- [x] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
-- [ ] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed
+- [!] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed | Blocked: A11 (BatchRegistry migration) not done yet
 
 ### Phase 4 — UI (`farmy_web/src/features/payment/`, route `/market`)
 - [ ] B12 | FRM balance + authority panel (mint FRM, set max markup) | Depends on: B11 | Done when: owner can mint/set markup from MetaMask, others see the revert; `npm run build` passes
@@ -50,6 +50,23 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - `uint256` prices in FRM base units match `FarmCoin` (18 decimals).
 - "Reverts for unminted batches" is good: `createSale` on an unknown batch fails inside the registry, so the escrow needs no own existence check.
 - Note only (no interface change): A stores `lastPrice` as `uint128`, so the escrow keeps sale prices in `uint96`; both are far above any demo price.
+
+## B10 — Gas report (Ganache, solc 0.8.24, optimizer 200, measured from receipts)
+| Call | Gas |
+|------|-----|
+| deploy FarmCoin | 616,173 |
+| deploy PriceCapEscrow | 1,378,797 |
+| FarmCoin.mint | 70,708 |
+| FarmCoin.approve | 46,383 |
+| setMaxMarkup | 29,751 |
+| createSale | 106,074 |
+| deposit | 73,484 |
+| releasePayment (with mock registry) | 78,215 |
+| refund, cancel Created | 34,127 |
+| refund, Deposited | 46,831 |
+
+Nothing flagged. `createSale` is the most expensive call: 3 new slots (2 for `Sale`, 1 for `_openSaleOf`) + 2 registry reads; that's the minimum for the lock. `releasePayment` will cost more with the real registry (its `recordSalePrice` SSTORE + event); re-measure in B16.
+Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy path, revert paths, access rule and event tested (59 tests in the whole suite, 0 warnings).
 
 ## Decisions Log
 - 2026-11-03 | B works on branch `person-b`, from `main` at 14f6d40 | rules §7
@@ -72,6 +89,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | B08: if the registry rejects `recordSalePrice` the whole release reverts (sale stays Deposited) | Price history and payment must never diverge
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
+- 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)
