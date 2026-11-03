@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A02 + A09b (`IBatchRegistry` v1 frozen; B's review OK with no changes; full suite 90 passing)
-- **Next task:** A16: integration tests (B's contracts merged into `main` at 18a620d)
+- **Last completed:** A16 (+B16): `test/integration/lifecycle.test.js`, 9 scenarios on the real contracts; full suite 99 passing
+- **Next task:** A17: end-to-end demo through the UI (after B12–B15 market screens)
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** none
 
@@ -40,7 +40,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A15 | Regulator panel: set inspector, set escrow | Depends on: A12 | Done when: owner can set both from the UI; other accounts are refused
 
 ### Phase 5 — Integration (after B is done)
-- [!] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios) | Blocked: B's contracts not delivered yet; rules forbid integration tests before both contracts are done
+- [x] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios)
 - [!] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask | Blocked: needs A16 and B's market screens
 
 ## Gas Report (A10, solc 0.8.24, optimizer 200 runs, Ganache)
@@ -69,6 +69,7 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A16: one shared file `test/integration/lifecycle.test.js` covers A's and B's scenarios (B16 included) plus "price can't keep rising" (115 → cap 138) | B hadn't written B16; user asked A's agent to cover B's gaps
 - 2026-11-03 | A02: **IBatchRegistry v1 frozen** (file unchanged since 85a6147); B01 review: OK, no changes | Both developers agreed
 - 2026-11-03 | User decision: Person A's agent also does B's unfinished B11–B16 for the demo, and logs it in roadmap-B | B stopped at B10; demo needs deployment + market UI
 - 2026-11-03 | A15: the regulator panel checks one address at a time with `isInspector` instead of listing all inspectors | `setInspector` has no events (A04), and there's no on-chain list

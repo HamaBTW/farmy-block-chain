@@ -38,7 +38,7 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A13 | ✅ | UI: mint form (MetaMask-signed, shows decoded revert reasons) |
 | A14 | ✅ | UI: custody transfer, add checkpoint, validate (with role hints) |
 | A15 | ✅ | UI: regulator panel (grant/revoke inspector, set escrow) |
-| A16 | ⛔ | Integration tests (blocked: needs B's escrow) |
+| A16 | ✅ | Integration tests: 9 scenarios with A + B contracts (`test/integration/`) |
 | A17 | ⛔ | End-to-end demo (blocked: needs B's escrow + market UI) |
 
 ✅ done · ⏳ waiting on someone · ⬜ todo · ⛔ blocked

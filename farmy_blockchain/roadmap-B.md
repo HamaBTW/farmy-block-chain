@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B11 (`migrations/2_deploy_payment.js`: FarmCoin + PriceCapEscrow(20%) + `registry.setEscrow`; done by A's agent)
-- **Next task:** B16 integration tests, then B12–B15 UI
+- **Last completed:** B16 (integration tests with the real registry, in shared `test/integration/lifecycle.test.js`; done by A's agent)
+- **Next task:** B12–B15 market UI
 - **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -40,7 +40,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [ ] B15 | Release + refund buttons | Depends on: B14 | Done when: both work from MetaMask; blocked cases show the contract revert
 
 ### Phase 5 — Integration (after A is done)
-- [ ] B16 | Integration tests in `test/integration/` (B's part): overpriced sale rejected, refund after cancelled sale | Depends on: B11, A10 | Done when: pass against the real `BatchRegistry` on Ganache (A writes happy path, blocked releases, unauthorized calls)
+- [x] B16 | Integration tests in `test/integration/` (B's part): overpriced sale rejected, refund after cancelled sale | Depends on: B11, A10 | Done when: pass against the real `BatchRegistry` on Ganache (A writes happy path, blocked releases, unauthorized calls)
 - [ ] B17 | End-to-end demo through the UI (with A's registry screens) | Depends on: B16, A17 | Done when: idea1 §7 lifecycle runs fully from MetaMask
 
 ## B01 — Review of `IBatchRegistry.sol` (v1 draft, commit 85a6147)
@@ -65,7 +65,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 | refund, cancel Created | 34,127 |
 | refund, Deposited | 46,831 |
 
-Nothing flagged. `createSale` is the most expensive call: 3 new slots (2 for `Sale`, 1 for `_openSaleOf`) + 2 registry reads; that's the minimum for the lock. `releasePayment` will cost more with the real registry (its `recordSalePrice` SSTORE + event); re-measure in B16.
+Nothing flagged. `createSale` is the most expensive call: 3 new slots (2 for `Sale`, 1 for `_openSaleOf`) + 2 registry reads; that's the minimum for the lock. `releasePayment` with the real registry, re-measured in B16: **79,766** gas (mock: 78,215).
 Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy path, revert paths, access rule and event tested (59 tests in the whole suite, 0 warnings).
 
 ## Decisions Log
@@ -90,6 +90,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
+- 2026-11-03 | B16 (by A's agent): B's scenarios (overpriced sale, refund after cancel, plus exact-cap edge and buyer refund blocked after delivery) are in the shared `test/integration/lifecycle.test.js` | One lifecycle file for both people's scenarios
 - 2026-11-03 | B11 (by A's agent): added shared `migrations/2_deploy_payment.js`; uses `BatchRegistry.deployed()`, deployer is regulator + market authority, markup 20 | As planned in B11; checked `registry.escrow() == escrow`, `escrow.registry()/coin()` correct
 - 2026-11-03 | B02: **IBatchRegistry v1 frozen** (A confirmed; no changes) | Both developers agreed
 - 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
