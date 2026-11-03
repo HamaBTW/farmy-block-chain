@@ -5,10 +5,10 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A00 (project init: Truffle toolchain pinned, folder layout, Next.js app `farmy_web/`, architecture.md)
-- **Next task:** A01: draft `contracts/interfaces/IBatchRegistry.sol` and get Person B's review
+- **Last completed:** A01 (`contracts/interfaces/IBatchRegistry.sol` drafted, compiles with no warnings)
+- **Next task:** A02: Person B reviews `IBatchRegistry.sol`, then apply feedback and freeze it
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** none
+- **Open problems:** waiting on B's review (A02). Until frozen, A03 can start on the skeleton but must not depend on unreviewed details
 
 ## Tasks
 
@@ -16,7 +16,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A00 | Project init (toolchain, folders, web app, docs) | Depends on: - | Done when: `truffle compile` runs, `farmy_web` `npm run build` + `npm run lint` pass, the UI reads Ganache
 
 ### Phase 1 — Shared interface (first, with B)
-- [ ] A01 | Draft `IBatchRegistry.sol`: `getLastPrice`, `isValidated`, `custodianOf`, `recordSalePrice` + NatSpec, prices `uint256` in FRM base units | Depends on: - | Done when: compiles with no warnings and is committed for B to review
+- [x] A01 | Draft `IBatchRegistry.sol`: `getLastPrice`, `isValidated`, `custodianOf`, `recordSalePrice` + NatSpec, prices `uint256` in FRM base units | Depends on: - | Done when: compiles with no warnings and is committed for B to review
 - [ ] A02 | Interface agreed with B (apply review, freeze) | Depends on: A01 | Done when: B confirms in writing and both roadmaps log "IBatchRegistry v1 frozen"
 
 ### Phase 2 — BatchRegistry contract (each task = code + tests in `test/registry/`)
@@ -48,8 +48,10 @@ Shared files touched by A are logged in the Decisions Log.
 - 2026-11-03 | MetaCoin sample removed; empty folder layout from rules §2 created | Clean start
 - 2026-11-03 | Web UI allowed (rules.md §2a), in `farmy_web/` next to `farmy_blockchain/` | User decision
 - 2026-11-03 | Proposal for A03 (confirm before coding): custodian = ERC-721 `ownerOf`, so custody isn't stored twice; `transferCustody` wraps the transfer and emits `CustodyTransferred` | Gas rule: don't store derivable data
+- 2026-11-03 | A01: added shared `contracts/interfaces/IBatchRegistry.sol` (v1 draft): only the 4 functions B needs, no events/errors (those belong to BatchRegistry); every function reverts for unminted batches; prices `uint256` FRM base units; `recordSalePrice` requires price > 0 | Smallest surface B can code against
 
 ## Needs From The Other Person
+- **Waiting on B now:** review `contracts/interfaces/IBatchRegistry.sol` (on branch `person-a`) and reply OK or with changes
 - **A delivers to B:** `IBatchRegistry.sol` (A01), deployed `BatchRegistry` address via migration (A11), `setEscrow` call in the shared migration once B's escrow deploys
 - **A needs from B:** review of `IBatchRegistry.sol` (A02); deployed `PriceCapEscrow` for integration (A16)
 - **Tell B now:** shared files changed in init: `truffle-config.js`, `rules.md`, `migrations/` (emptied), `farmy_web/` created
