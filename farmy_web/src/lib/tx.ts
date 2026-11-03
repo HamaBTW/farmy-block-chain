@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import type { Contract, ContractTransactionResponse, TransactionReceipt } from "ethers";
 import { getContract, type ContractName } from "./contracts";
+import { friendlyError } from "./errors";
 import { useWallet } from "./wallet/WalletProvider";
 
 /** Returns a deployed contract connected to the MetaMask signer. */
@@ -49,12 +50,12 @@ export async function mined(tx: Promise<ContractTransactionResponse>): Promise<T
   return receipt;
 }
 
-/** Prefers the decoded custom error (e.g. "NotInspector()") over the generic RPC message. */
+/** Prefers the decoded custom error, in plain words (lib/errors.ts), over the generic RPC message. */
 function revertMessage(e: unknown): string {
   const err = e as { revert?: { name: string; args: unknown[] }; shortMessage?: string; message?: string; code?: string };
-  if (err.code === "ACTION_REJECTED") return "Transaction rejected in MetaMask.";
+  if (err.code === "ACTION_REJECTED") return "You cancelled the transaction in MetaMask.";
   const revert = err.revert ?? decodeRevert(e);
-  if (revert) return `Reverted: ${revert.name}(${revert.args.map(String).join(", ")})`;
+  if (revert) return friendlyError(revert);
   return err.shortMessage ?? err.message ?? String(e);
 }
 
