@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B10 (coverage + gas pass; 59 tests passing in the whole suite)
-- **Next task:** B11: shared migration (blocked until A11 deploys `BatchRegistry`)
+- **Last completed:** B11 (`migrations/2_deploy_payment.js`: FarmCoin + PriceCapEscrow(20%) + `registry.setEscrow`; done by A's agent)
+- **Next task:** B16 integration tests, then B12–B15 UI
 - **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -31,7 +31,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
-- [!] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed | Blocked: A11 (BatchRegistry migration) not done yet
+- [x] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed
 
 ### Phase 4 — UI (`farmy_web/src/features/payment/`, route `/market`)
 - [ ] B12 | FRM balance + authority panel (mint FRM, set max markup) | Depends on: B11 | Done when: owner can mint/set markup from MetaMask, others see the revert; `npm run build` passes
@@ -90,6 +90,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
+- 2026-11-03 | B11 (by A's agent): added shared `migrations/2_deploy_payment.js`; uses `BatchRegistry.deployed()`, deployer is regulator + market authority, markup 20 | As planned in B11; checked `registry.escrow() == escrow`, `escrow.registry()/coin()` correct
 - 2026-11-03 | B02: **IBatchRegistry v1 frozen** (A confirmed; no changes) | Both developers agreed
 - 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
 
