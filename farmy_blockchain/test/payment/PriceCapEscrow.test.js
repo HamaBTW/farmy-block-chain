@@ -228,4 +228,101 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
       assert.equal((await escrow.getSale(1)).state, State.Deposited);
     });
   });
+
+  describe("refund", () => {
+    describe("of a Created sale (cancel)", () => {
+      beforeEach(async () => {
+        await escrow.createSale(BATCH, frm(115), { from: seller });
+      });
+
+      it("lets the seller cancel and frees the batch", async () => {
+        const tx = await escrow.refund(1, { from: seller });
+        assert.equal((await escrow.getSale(1)).state, State.Refunded);
+        assert.equal((await escrow.openSaleOf(BATCH)).toString(), "0");
+
+        const log = tx.logs[0];
+        assert.equal(log.event, "Refunded");
+        assert.equal(log.args.saleId.toString(), "1");
+        assert.equal(log.args.buyer, ZERO_ADDRESS);
+        assert.equal(log.args.amount.toString(), "0");
+
+        await escrow.createSale(BATCH, frm(110), { from: seller });
+      });
+
+      it("reverts for anyone else while the seller holds the goods", async () => {
+        await expectRevert(escrow.refund(1, { from: other }), "NotAllowed()");
+      });
+
+      it("lets anyone clear a stale listing once the seller lost custody", async () => {
+        await registry.setCustodian(BATCH, other);
+        await escrow.refund(1, { from: other });
+        assert.equal((await escrow.getSale(1)).state, State.Refunded);
+      });
+
+      it("blocks a deposit after the cancel", async () => {
+        await escrow.refund(1, { from: seller });
+        await expectRevert(escrow.deposit(1, { from: buyer }), "WrongState(uint8)");
+      });
+    });
+
+    describe("of a Deposited sale", () => {
+      beforeEach(depositedSale);
+
+      it("lets the seller cancel and returns the FRM to the buyer", async () => {
+        const tx = await escrow.refund(1, { from: seller });
+        assert.equal((await coin.balanceOf(buyer)).toString(), frm(115));
+        assert.equal((await coin.balanceOf(escrow.address)).toString(), "0");
+        assert.equal((await escrow.getSale(1)).state, State.Refunded);
+        assert.equal((await escrow.openSaleOf(BATCH)).toString(), "0");
+
+        const log = tx.logs[0];
+        assert.equal(log.event, "Refunded");
+        assert.equal(log.args.buyer, buyer);
+        assert.equal(log.args.amount.toString(), frm(115));
+      });
+
+      it("lets the buyer refund while the batch is not validated", async () => {
+        await registry.setCustodian(BATCH, buyer);
+        await escrow.refund(1, { from: buyer });
+        assert.equal((await coin.balanceOf(buyer)).toString(), frm(115));
+      });
+
+      it("lets the buyer refund while custody has not moved", async () => {
+        await registry.setValidated(BATCH, true);
+        await escrow.refund(1, { from: buyer });
+        assert.equal((await coin.balanceOf(buyer)).toString(), frm(115));
+      });
+
+      it("blocks the buyer once validated and delivered", async () => {
+        await registry.setValidated(BATCH, true);
+        await registry.setCustodian(BATCH, buyer);
+        await expectRevert(escrow.refund(1, { from: buyer }), "ReleaseConditionsMet()");
+      });
+
+      it("reverts for a third party", async () => {
+        await expectRevert(escrow.refund(1, { from: other }), "NotAllowed()");
+      });
+
+      it("reverts on a second refund", async () => {
+        await escrow.refund(1, { from: seller });
+        await expectRevert(escrow.refund(1, { from: seller }), "WrongState(uint8)");
+      });
+
+      it("reverts after release, and release reverts after refund", async () => {
+        await registry.setValidated(BATCH, true);
+        await registry.setCustodian(BATCH, buyer);
+        await escrow.releasePayment(1);
+        await expectRevert(escrow.refund(1, { from: seller }), "WrongState(uint8)");
+
+        await registry.setBatch(2, frm(100), true, seller);
+        await escrow.createSale(2, frm(100), { from: seller });
+        await escrow.refund(2, { from: seller });
+        await expectRevert(escrow.releasePayment(2), "WrongState(uint8)");
+      });
+    });
+
+    it("reverts for an unknown sale", async () => {
+      await expectRevert(escrow.refund(42, { from: seller }), "WrongState(uint8)");
+    });
+  });
 });

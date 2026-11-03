@@ -44,6 +44,8 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
     event SaleCreated(uint256 indexed saleId, uint256 indexed batchId, address indexed seller, uint256 price);
     event Deposited(uint256 indexed saleId, address indexed buyer, uint256 price);
     event PaymentReleased(uint256 indexed saleId, address indexed seller, uint256 price);
+    /// @dev `amount` is 0 when a sale is cancelled before any deposit.
+    event Refunded(uint256 indexed saleId, address indexed buyer, uint256 amount);
 
     error ZeroAddress();
     error ZeroPrice();
@@ -54,6 +56,8 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
     error SellerCannotBuy();
     error NotValidated();
     error CustodyNotMoved();
+    error NotAllowed();
+    error ReleaseConditionsMet();
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -122,6 +126,27 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
         _registry.recordSalePrice(sale.batchId, sale.price);
     }
 
+    /// @notice Cancels a sale and returns any deposit to the buyer.
+    ///         Created: the seller, or anyone once the seller lost custody.
+    ///         Deposited: the seller any time, the buyer only while release conditions are not met.
+    /// @param saleId The sale id.
+    function refund(uint256 saleId) external nonReentrant {
+        Sale memory sale = _sales[saleId];
+        if (sale.state == SaleState.Created) {
+            _checkCanCancel(sale);
+        } else if (sale.state == SaleState.Deposited) {
+            _checkCanRefund(sale);
+        } else {
+            revert WrongState(sale.state);
+        }
+
+        uint256 amount = sale.state == SaleState.Deposited ? sale.price : 0;
+        _sales[saleId].state = SaleState.Refunded;
+        delete _openSaleOf[sale.batchId];
+        emit Refunded(saleId, sale.buyer, amount);
+        if (amount != 0) _coin.safeTransfer(sale.buyer, amount);
+    }
+
     /// @notice Full state of a sale (state None for an unknown id).
     /// @param saleId The sale id.
     function getSale(uint256 saleId) external view returns (Sale memory) {
@@ -147,6 +172,20 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
     /// @notice Payment token.
     function coin() external view returns (address) {
         return address(_coin);
+    }
+
+    /// @dev A stale listing (seller no longer holds the goods) can be cleared by anyone.
+    function _checkCanCancel(Sale memory sale) private view {
+        if (msg.sender != sale.seller && _registry.custodianOf(sale.batchId) == sale.seller) revert NotAllowed();
+    }
+
+    /// @dev Stops a buyer from taking back the money once the goods are validated and delivered.
+    function _checkCanRefund(Sale memory sale) private view {
+        if (msg.sender == sale.seller) return;
+        if (msg.sender != sale.buyer) revert NotAllowed();
+        if (_registry.isValidated(sale.batchId) && _registry.custodianOf(sale.batchId) == sale.buyer) {
+            revert ReleaseConditionsMet();
+        }
     }
 
     function _setMaxMarkup(uint16 percent) private {
