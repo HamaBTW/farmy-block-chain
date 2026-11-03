@@ -5,10 +5,10 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A01 (`contracts/interfaces/IBatchRegistry.sol` drafted, compiles with no warnings)
-- **Next task:** A02: Person B reviews `IBatchRegistry.sol`, then apply feedback and freeze it
+- **Last completed:** A03 (`BatchRegistry` skeleton deployed in tests, 4 passing). A01 done, A02 still waiting on B
+- **Next task:** A04: `setInspector` / `setEscrow` (A02 review can land in parallel)
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** waiting on B's review (A02). Until frozen, A03 can start on the skeleton but must not depend on unreviewed details
+- **Open problems:** waiting on B's review of `IBatchRegistry.sol` (A02)
 
 ## Tasks
 
@@ -20,13 +20,13 @@ Shared files touched by A are logged in the Decisions Log.
 - [ ] A02 | Interface agreed with B (apply review, freeze) | Depends on: A01 | Done when: B confirms in writing and both roadmaps log "IBatchRegistry v1 frozen"
 
 ### Phase 2 — BatchRegistry contract (each task = code + tests in `test/registry/`)
-- [ ] A03 | Skeleton: `BatchRegistry is ERC721, Ownable, IBatchRegistry`, custom errors, storage layout (packed `Batch` struct), constructor | Depends on: A02 | Done when: compiles, deploy test passes, `name()`/`symbol()`/`owner()` tested
+- [x] A03 | Skeleton: `BatchRegistry is ERC721URIStorage, Ownable`, storage layout (packed `Batch` struct), constructor | Depends on: A01 | Done when: compiles, deploy test passes, `name()`/`symbol()`/`owner()` tested
 - [ ] A04 | Admin: `setInspector(addr, bool)`, `setEscrow(addr)` (onlyOwner, zero-address checks) | Depends on: A03 | Done when: happy path, non-owner revert and zero-address revert tested
 - [ ] A05 | `mintBatch(to, metadataURI, initialPrice)` + `tokenURI` + `BatchMinted` + first `PriceRecorded` | Depends on: A04 | Done when: mint, URI, initial price, events, zero-address and zero-price reverts tested
 - [ ] A06 | `transferCustody(batchId, newCustodian)` + `custodianOf` + `CustodyTransferred` | Depends on: A05 | Done when: only current custodian can transfer; revert paths and event tested
 - [ ] A07 | `addCheckpoint(batchId, dataHash)` (inspector only, event-only storage) | Depends on: A04 | Done when: event args tested; non-inspector and unknown-batch reverts tested
 - [ ] A08 | `validateBatch(batchId)` + `isValidated` + `BatchValidated` | Depends on: A05 | Done when: inspector validates; non-inspector, unknown batch and double-validation reverts tested
-- [ ] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded` | Depends on: A04, A05 | Done when: test account set as escrow can record; any other caller reverts; event tested
+- [ ] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A02, A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against the frozen interface
 - [ ] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
@@ -47,7 +47,13 @@ Shared files touched by A are logged in the Decisions Log.
 - 2026-11-03 | OpenZeppelin pinned to 5.0.2 | 5.1+ uses `mcopy`, which doesn't compile for paris
 - 2026-11-03 | MetaCoin sample removed; empty folder layout from rules §2 created | Clean start
 - 2026-11-03 | Web UI allowed (rules.md §2a), in `farmy_web/` next to `farmy_blockchain/` | User decision
-- 2026-11-03 | Proposal for A03 (confirm before coding): custodian = ERC-721 `ownerOf`, so custody isn't stored twice; `transferCustody` wraps the transfer and emits `CustodyTransferred` | Gas rule: don't store derivable data
+- 2026-11-03 | Confirmed by user: custodian = ERC-721 `ownerOf`, so custody isn't stored twice; `transferCustody` wraps the transfer and emits `CustodyTransferred` | Gas rule: don't store derivable data
+- 2026-11-03 | Confirmed by user: roles = `Ownable` (owner = regulator) + `mapping(address => bool)` inspectors + one `_escrow` address, not AccessControl | Smaller bytecode and gas; matches idea's 3 roles
+- 2026-11-03 | A03: base is `ERC721URIStorage` (OZ) for `metadataURI`, not a hand-made mapping | Rules: don't re-implement standards
+- 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
+- 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
+- 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A03: deployer (`msg.sender`) becomes regulator | Simplest; ownership can be transferred with OZ `transferOwnership`
 - 2026-11-03 | A01: added shared `contracts/interfaces/IBatchRegistry.sol` (v1 draft): only the 4 functions B needs, no events/errors (those belong to BatchRegistry); every function reverts for unminted batches; prices `uint256` FRM base units; `recordSalePrice` requires price > 0 | Smallest surface B can code against
 
 ## Needs From The Other Person
