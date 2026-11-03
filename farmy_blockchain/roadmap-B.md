@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B04 (`MockBatchRegistry`; 4 tests passing)
-- **Next task:** B05: `PriceCapEscrow` skeleton + `setMaxMarkup` + `MarkupChanged`
+- **Last completed:** B05 (`PriceCapEscrow` skeleton; 5 tests passing)
+- **Next task:** B06: `createSale` with the price cap
 - **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** A02/B02 freeze waits on A confirming the review below
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -23,7 +23,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 ### Phase 2 — Contracts (each task = code + tests in `test/payment/`)
 - [x] B03 | `FarmCoin`: OZ `ERC20("FarmCoin","FRM")` + `Ownable`, `mint(to, amount)` onlyOwner (market authority) | Depends on: - | Done when: name/symbol/decimals, owner mint, non-owner revert, zero-address revert tested
 - [x] B04 | `MockBatchRegistry` in `contracts/mocks/` implementing `IBatchRegistry` with test setters | Depends on: A01 | Done when: compiles; setters + 4 interface functions work in a small test
-- [ ] B05 | `PriceCapEscrow` skeleton: constructor(registry, coin, maxMarkupPercent) with zero-address checks, `Ownable` (owner = market authority), `setMaxMarkup` + `MarkupChanged`, view `maxMarkupPercent()` | Depends on: B03, B04 | Done when: deploy, setMaxMarkup happy/non-owner/event tested
+- [x] B05 | `PriceCapEscrow` skeleton: constructor(registry, coin, maxMarkupPercent) with zero-address checks, `Ownable` (owner = market authority), `setMaxMarkup` + `MarkupChanged`, view `maxMarkupPercent()` | Depends on: B03, B04 | Done when: deploy, setMaxMarkup happy/non-owner/event tested
 - [ ] B06 | `createSale(batchId, price)`: seller must be `custodianOf`, `price > 0`, `price <= lastPrice * (100 + markup) / 100` + `SaleCreated` | Depends on: B04 | Done when: within-cap OK, cap edge (exactly cap) OK, over-cap revert (150 vs cap 120), non-custodian and zero-price reverts, event tested
 - [ ] B07 | `deposit(saleId)`: buyer pulls `price` FRM via `SafeERC20.safeTransferFrom`, state `Created → Deposited` + `Deposited` | Depends on: B06 | Done when: balances moved, wrong state, no allowance, seller-as-buyer, unknown-sale reverts, event tested
 - [ ] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
@@ -61,6 +61,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | Approved by user: `refund` = seller may cancel any time before release; buyer may refund only while release conditions are not met | Stops a buyer from keeping goods and money after delivery
 - 2026-11-03 | B04: mock reverts `UnknownBatch` for a batch with no custodian and only lets the set escrow call `recordSalePrice` | Behaves like the interface promises, so escrow tests stay valid against the real registry
 - 2026-11-03 | Escrow default max markup 20% in the migration | idea1 §7 example (100 → cap 120)
+- 2026-11-03 | B05: markup stored as `uint16` (max 65535%), `MarkupChanged(uint16 percent)` also emitted by the constructor | Packs with the sale counter in one slot; event history shows the initial markup too
+- 2026-11-03 | B05: `registry()` and `coin()` views on the escrow | UI needs the coin address for `approve`; immutables are cheap to read
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)
