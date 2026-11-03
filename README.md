@@ -34,7 +34,7 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A10 | ✅ | Coverage + gas report (41 tests, `npm run test:gas`) |
 | A11 | ✅ | Registry migration (`npm run migrate`) |
 | A12 | ✅ | UI: batch list + detail with event history (`/registry`) |
-| A13 | ⬜ | UI: mint form |
+| A13 | ✅ | UI: mint form (MetaMask-signed, shows decoded revert reasons) |
 | A14 | ⬜ | UI: custody + inspector actions |
 | A15 | ⬜ | UI: regulator panel |
 | A16 | ⬜ | Integration tests (needs B's escrow) |

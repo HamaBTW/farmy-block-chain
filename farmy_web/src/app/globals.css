@@ -35,6 +35,9 @@ body {
   .btn-warn {
     @apply bg-amber-600 hover:bg-amber-700;
   }
+  .input {
+    @apply w-full rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm;
+  }
   .pill {
     @apply rounded-full border border-black/15 dark:border-white/20 px-3 py-1 text-sm;
   }
