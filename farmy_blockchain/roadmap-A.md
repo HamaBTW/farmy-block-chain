@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A10 (coverage + gas pass; 41 tests passing; gas table below)
-- **Next task:** A11: `migrations/1_deploy_registry.js` + sync to UI. A09b runs whenever B finishes the A02 review
+- **Last completed:** A11 (`migrations/1_deploy_registry.js`; deployed to Ganache, UI shows it)
+- **Next task:** A12: UI batch list + detail. A09b runs whenever B finishes the A02 review
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
 
@@ -31,7 +31,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
-- [ ] A11 | `migrations/1_deploy_registry.js` (shared) + `npm run migrate` syncs to UI | Depends on: A10 | Done when: deployed on Ganache, `/` shows "BatchRegistry deployed ✅"
+- [x] A11 | `migrations/1_deploy_registry.js` (shared) + `npm run migrate` syncs to UI | Depends on: A10 | Done when: deployed on Ganache, `/` shows "BatchRegistry deployed ✅"
 
 ### Phase 4 — UI (`farmy_web/src/features/registry/`)
 - [ ] A12 | Batch list + detail (reads `custodianOf`, `isValidated`, `getLastPrice`, `tokenURI`; history from events) | Depends on: A11 | Done when: works on Ganache, `npm run build` passes
@@ -69,6 +69,7 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A11: added shared `migrations/1_deploy_registry.js` (deploy only, no demo roles) | Inspectors and escrow are set by the regulator (UI panel A15) and B's migration
 - 2026-11-03 | A10: added dev dependency `eth-gas-reporter@0.2.27`, opt-in through `GAS_REPORT=1` in shared `truffle-config.js` (`npm run test:gas`) | Rules §6 asks for a gas report; opt-in keeps `npm test` fast
 - 2026-11-03 | A09: split off A09b (re-check against frozen interface) | A02 review not done yet; rule 11 (split instead of claiming frozen)
 - 2026-11-03 | A09: `recordSalePrice` checks `NotEscrow` first, then `ZeroPrice`, then batch exists; while no escrow is set nobody can call it | Cheapest revert first; `_escrow == 0` never matches `msg.sender`
@@ -89,5 +90,6 @@ Run it with `npm run test:gas`.
 ## Needs From The Other Person
 - **Waiting on B now:** review `contracts/interfaces/IBatchRegistry.sol` (on branch `person-a`) and reply OK or with changes
 - **A delivers to B:** `IBatchRegistry.sol` (A01), deployed `BatchRegistry` address via migration (A11), `setEscrow` call in the shared migration once B's escrow deploys
+- **For B's migration:** write `migrations/2_deploy_payment.js`: `const registry = await BatchRegistry.deployed()`, deploy FarmCoin and `PriceCapEscrow(registry.address, coin.address)`, then `await registry.setEscrow(escrow.address)` from the deployer (the regulator)
 - **A needs from B:** review of `IBatchRegistry.sol` (A02); deployed `PriceCapEscrow` for integration (A16)
 - **Tell B now:** shared files changed in init: `truffle-config.js`, `rules.md`, `migrations/` (emptied), `farmy_web/` created

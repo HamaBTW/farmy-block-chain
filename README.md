@@ -29,10 +29,10 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A00 | ✅ | Project init: toolchain, folders, Next.js app, docs |
 | A01 | ✅ | `IBatchRegistry.sol` draft |
 | A02 | ⏳ | Interface review by Person B |
-| A03–A09 | ✅ | `BatchRegistry` contract: mint, custody, checkpoints, validation, sale price  |
+| A03–A09 | ✅ | `BatchRegistry` contract: mint, custody, checkpoints, validation, sale price |
 | A09b | ⏳ | Re-check against frozen interface (after A02) |
 | A10 | ✅ | Coverage + gas report (41 tests, `npm run test:gas`) |
-| A11 | ⬜ | Registry migration |
+| A11 | ✅ | Registry migration (`npm run migrate`) |
 | A12 | ⬜ | UI: batch list + detail |
 | A13 | ⬜ | UI: mint form |
 | A14 | ⬜ | UI: custody + inspector actions |
