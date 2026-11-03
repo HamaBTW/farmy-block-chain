@@ -100,6 +100,10 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transpo
       await expectRevert(registry.mintBatch(ZERO_ADDRESS, URI, PRICE, { from: farmer }), "ERC721InvalidReceiver(address)");
     });
 
+    it("reverts tokenURI for an unknown batch", async () => {
+      await expectRevert(registry.tokenURI(99), "ERC721NonexistentToken(uint256)");
+    });
+
     it("reverts for a price above uint128", async () => {
       const tooBig = web3.utils.toBN(2).pow(web3.utils.toBN(128)).toString();
       await expectRevert(registry.mintBatch(farmer, URI, tooBig, { from: farmer }), "SafeCastOverflowedUintDowncast(uint8,uint256)");

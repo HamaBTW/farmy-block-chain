@@ -6,9 +6,13 @@
   "scripts": {
     "compile": "truffle compile",
     "migrate": "truffle migrate --reset --network development && npm --prefix ../farmy_web run sync-contracts",
-    "test": "truffle test --network development"
+    "test": "truffle test --network development",
+    "test:gas": "GAS_REPORT=1 truffle test --network development"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2"
+  },
+  "devDependencies": {
+    "eth-gas-reporter": "0.2.27"
   }
 }

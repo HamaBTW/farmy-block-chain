@@ -12,7 +12,10 @@ module.exports = {
     },
   },
 
-  mocha: {},
+  // `npm run test:gas` sets GAS_REPORT=1 to print a gas table (eth-gas-reporter).
+  mocha: process.env.GAS_REPORT
+    ? { reporter: "eth-gas-reporter", reporterOptions: { currency: "USD", noColors: true, showTimeSpent: false } }
+    : {},
 
   compilers: {
     solc: {

@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A09 (`recordSalePrice` + `getLastPrice`; `BatchRegistry is IBatchRegistry` against draft v1; 40 tests passing). All 4 interface functions and 5 events from idea1 are in
-- **Next task:** A10: coverage + gas pass. A09b runs whenever B finishes the A02 review
+- **Last completed:** A10 (coverage + gas pass; 41 tests passing; gas table below)
+- **Next task:** A11: `migrations/1_deploy_registry.js` + sync to UI. A09b runs whenever B finishes the A02 review
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
 
@@ -28,7 +28,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A08 | `validateBatch(batchId)` + `isValidated` + `BatchValidated` | Depends on: A05 | Done when: inspector validates; non-inspector, unknown batch and double-validation reverts tested
 - [x] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against draft v1 of the interface
 - [ ] A09b | Re-check `BatchRegistry` against the frozen interface (apply any B change) | Depends on: A02 | Done when: compiles with no warnings against frozen `IBatchRegistry.sol`, `npm test` green
-- [ ] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
+- [x] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
 - [ ] A11 | `migrations/1_deploy_registry.js` (shared) + `npm run migrate` syncs to UI | Depends on: A10 | Done when: deployed on Ganache, `/` shows "BatchRegistry deployed ✅"
@@ -43,6 +43,21 @@ Shared files touched by A are logged in the Decisions Log.
 - [ ] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios)
 - [ ] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask
 
+## Gas Report (A10, solc 0.8.24, optimizer 200 runs, Ganache)
+
+| Method | Avg gas | Notes |
+|--------|---------|-------|
+| deploy `BatchRegistry` | 1,618,773 | 24% of block limit |
+| `mintBatch` | 138,476 | Most expensive: NFT mint (~50k) + price slot (22k) + URI string (~44k for 2 slots). ⚠️ A `bytes32` metadata hash instead of a URI string would save ~20–40k per mint; kept because idea1 names the parameter `metadataURI` |
+| `transferCustody` | 56,560 | Same as plain `transferFrom` (57,160) plus the `CustodyTransferred` event |
+| `setEscrow` | 43,704 | |
+| `setInspector` | 42,280 | |
+| `recordSalePrice` | 32,835 | |
+| `validateBatch` | 32,748 | |
+| `addCheckpoint` | 28,284 | Event only, no storage |
+
+Run it with `npm run test:gas`.
+
 ## Decisions Log
 - 2026-11-03 | solc pinned to 0.8.24 with `evmVersion: "paris"` + optimizer (shared `truffle-config.js`) | Ganache 7 rejects push0/mcopy
 - 2026-11-03 | OpenZeppelin pinned to 5.0.2 | 5.1+ uses `mcopy`, which doesn't compile for paris
@@ -54,6 +69,7 @@ Shared files touched by A are logged in the Decisions Log.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A10: added dev dependency `eth-gas-reporter@0.2.27`, opt-in through `GAS_REPORT=1` in shared `truffle-config.js` (`npm run test:gas`) | Rules §6 asks for a gas report; opt-in keeps `npm test` fast
 - 2026-11-03 | A09: split off A09b (re-check against frozen interface) | A02 review not done yet; rule 11 (split instead of claiming frozen)
 - 2026-11-03 | A09: `recordSalePrice` checks `NotEscrow` first, then `ZeroPrice`, then batch exists; while no escrow is set nobody can call it | Cheapest revert first; `_escrow == 0` never matches `msg.sender`
 - 2026-11-03 | A08: validation is one-way (no un-validate) and survives custody transfers | idea1 has no revoke; escrow reads it at release time
