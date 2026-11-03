@@ -148,4 +148,35 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transpo
       await expectRevert(registry.custodianOf(99), "ERC721NonexistentToken(uint256)");
     });
   });
+
+  describe("addCheckpoint", () => {
+    const DATA_HASH = web3.utils.soliditySha3("weight=120kg;temp=4C;loc=Tunis;t=2026-11-03");
+
+    beforeEach(async () => {
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      await registry.setInspector(inspector, true, { from: regulator });
+    });
+
+    it("emits CheckpointAdded with the inspector and data hash", async () => {
+      const tx = await registry.addCheckpoint(1, DATA_HASH, { from: inspector });
+      const ev = tx.logs.find((l) => l.event === "CheckpointAdded");
+      assert.equal(ev.args.batchId.toString(), "1");
+      assert.equal(ev.args.inspector, inspector);
+      assert.equal(ev.args.dataHash, DATA_HASH);
+    });
+
+    it("reverts for a non-inspector (even the custodian or regulator)", async () => {
+      await expectRevert(registry.addCheckpoint(1, DATA_HASH, { from: farmer }), "NotInspector()");
+      await expectRevert(registry.addCheckpoint(1, DATA_HASH, { from: regulator }), "NotInspector()");
+    });
+
+    it("reverts for a revoked inspector", async () => {
+      await registry.setInspector(inspector, false, { from: regulator });
+      await expectRevert(registry.addCheckpoint(1, DATA_HASH, { from: inspector }), "NotInspector()");
+    });
+
+    it("reverts for an unknown batch", async () => {
+      await expectRevert(registry.addCheckpoint(99, DATA_HASH, { from: inspector }), "ERC721NonexistentToken(uint256)");
+    });
+  });
 });

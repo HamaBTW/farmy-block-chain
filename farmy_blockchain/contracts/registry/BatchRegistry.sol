@@ -24,10 +24,17 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
 
     event BatchMinted(uint256 indexed batchId, address indexed farmer);
     event CustodyTransferred(uint256 indexed batchId, address indexed from, address indexed to);
+    event CheckpointAdded(uint256 indexed batchId, address indexed inspector, bytes32 dataHash);
     event PriceRecorded(uint256 indexed batchId, uint256 price);
 
     error ZeroAddress();
     error ZeroPrice();
+    error NotInspector();
+
+    modifier onlyInspector() {
+        if (!_inspectors[msg.sender]) revert NotInspector();
+        _;
+    }
 
     /// @notice Deploys the registry with the deployer as regulator.
     constructor() ERC721("Farmy Batch", "FBATCH") Ownable(msg.sender) {}
@@ -59,6 +66,14 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     function transferCustody(uint256 batchId, address newCustodian) external {
         // OZ checks: batch exists, caller is the custodian, receiver isn't zero.
         _transfer(msg.sender, newCustodian, batchId);
+    }
+
+    /// @notice Logs an inspection checkpoint. Only the hash goes on-chain.
+    /// @param batchId The batch NFT id.
+    /// @param dataHash Hash of the off-chain record (weight, temperature, location, time).
+    function addCheckpoint(uint256 batchId, bytes32 dataHash) external onlyInspector {
+        _requireOwned(batchId);
+        emit CheckpointAdded(batchId, msg.sender, dataHash);
     }
 
     /// @notice Grants or revokes the inspector role.
