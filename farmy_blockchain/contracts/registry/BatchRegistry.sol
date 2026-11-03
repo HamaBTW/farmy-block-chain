@@ -25,11 +25,13 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     event BatchMinted(uint256 indexed batchId, address indexed farmer);
     event CustodyTransferred(uint256 indexed batchId, address indexed from, address indexed to);
     event CheckpointAdded(uint256 indexed batchId, address indexed inspector, bytes32 dataHash);
+    event BatchValidated(uint256 indexed batchId, address indexed inspector);
     event PriceRecorded(uint256 indexed batchId, uint256 price);
 
     error ZeroAddress();
     error ZeroPrice();
     error NotInspector();
+    error AlreadyValidated();
 
     modifier onlyInspector() {
         if (!_inspectors[msg.sender]) revert NotInspector();
@@ -76,6 +78,16 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
         emit CheckpointAdded(batchId, msg.sender, dataHash);
     }
 
+    /// @notice Marks a batch as validated by an inspector. Can only happen once.
+    /// @param batchId The batch NFT id.
+    function validateBatch(uint256 batchId) external onlyInspector {
+        _requireOwned(batchId);
+        Batch storage batch = _batches[batchId];
+        if (batch.validated) revert AlreadyValidated();
+        batch.validated = true;
+        emit BatchValidated(batchId, msg.sender);
+    }
+
     /// @notice Grants or revokes the inspector role.
     /// @param account Inspector address.
     /// @param allowed True to grant, false to revoke.
@@ -95,6 +107,13 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     /// @param account Address to check.
     function isInspector(address account) external view returns (bool) {
         return _inspectors[account];
+    }
+
+    /// @notice Whether an inspector has validated the batch.
+    /// @param batchId The batch NFT id.
+    function isValidated(uint256 batchId) external view returns (bool) {
+        _requireOwned(batchId);
+        return _batches[batchId].validated;
     }
 
     /// @notice Address that currently holds the physical goods.

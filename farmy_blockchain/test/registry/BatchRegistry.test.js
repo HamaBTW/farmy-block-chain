@@ -179,4 +179,44 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transpo
       await expectRevert(registry.addCheckpoint(99, DATA_HASH, { from: inspector }), "ERC721NonexistentToken(uint256)");
     });
   });
+
+  describe("validateBatch", () => {
+    beforeEach(async () => {
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      await registry.setInspector(inspector, true, { from: regulator });
+    });
+
+    it("starts not validated", async () => {
+      assert.isFalse(await registry.isValidated(1));
+    });
+
+    it("validates and emits BatchValidated", async () => {
+      const tx = await registry.validateBatch(1, { from: inspector });
+      assert.isTrue(await registry.isValidated(1));
+      const ev = tx.logs.find((l) => l.event === "BatchValidated");
+      assert.equal(ev.args.batchId.toString(), "1");
+      assert.equal(ev.args.inspector, inspector);
+    });
+
+    it("keeps validation after a custody transfer", async () => {
+      await registry.validateBatch(1, { from: inspector });
+      await registry.transferCustody(1, transporter, { from: farmer });
+      assert.isTrue(await registry.isValidated(1));
+    });
+
+    it("reverts for a non-inspector", async () => {
+      await expectRevert(registry.validateBatch(1, { from: farmer }), "NotInspector()");
+      await expectRevert(registry.validateBatch(1, { from: regulator }), "NotInspector()");
+    });
+
+    it("reverts when already validated", async () => {
+      await registry.validateBatch(1, { from: inspector });
+      await expectRevert(registry.validateBatch(1, { from: inspector }), "AlreadyValidated()");
+    });
+
+    it("reverts for an unknown batch", async () => {
+      await expectRevert(registry.validateBatch(99, { from: inspector }), "ERC721NonexistentToken(uint256)");
+      await expectRevert(registry.isValidated(99), "ERC721NonexistentToken(uint256)");
+    });
+  });
 });
