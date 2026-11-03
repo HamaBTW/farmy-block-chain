@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Bricolage_Grotesque, Figtree, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/Header";
+import { NextStepBanner } from "@/components/NextStepBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { PeopleProvider } from "@/lib/people/PeopleProvider";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <ToastProvider>
               <Suspense>
                 <Header />
+                <NextStepBanner />
               </Suspense>
               <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
               <footer className="px-4 py-6 text-center text-xs text-ink-soft">Simulated goods and money on a local test chain.</footer>
