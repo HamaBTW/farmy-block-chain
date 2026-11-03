@@ -6,9 +6,9 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 ## Current State
 - **Date:** 2026-11-03
 - **Last completed:** B10 (coverage + gas pass; 59 tests passing in the whole suite)
-- **Next task:** B11: shared migration (blocked until A11 deploys `BatchRegistry`)
-- **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
-- **Open problems:** A02/B02 freeze waits on A confirming the B01 review; B11+ blocked on A11 (A has not finished A05–A11)
+- **Next task:** B11: `migrations/2_deploy_payment.js` (A11 is done: `1_deploy_registry.js` on main)
+- **Branch:** `person-b` (pushed), fast-forwarded to `main` at 18a620d (includes A up to A15)
+- **Open problems:** none blocking. Confirm with A that A02 (interface freeze) is logged
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
 
 ## Tasks
@@ -31,7 +31,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
-- [!] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed | Blocked: A11 (BatchRegistry migration) not done yet
+- [ ] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed
 
 ### Phase 4 — UI (`farmy_web/src/features/payment/`, route `/market`)
 - [ ] B12 | FRM balance + authority panel (mint FRM, set max markup) | Depends on: B11 | Done when: owner can mint/set markup from MetaMask, others see the revert; `npm run build` passes
@@ -91,6 +91,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
 - 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
+- 2026-11-03 | Shared file `farmy_web/scripts/sync-contracts.mjs`: `mkdirSync(src/contracts, recursive)` before writing | `npm run migrate` crashed with ENOENT on a fresh clone because `src/contracts/` only holds the git-ignored file. Tell A.
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)

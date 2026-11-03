@@ -1,6 +1,6 @@
 // Copies ABI + Ganache address of every deployed contract from the Truffle build
 // into src/contracts/deployments.json. Run after every `truffle migrate`.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,6 +21,8 @@ if (existsSync(buildDir)) {
   console.warn(`[sync-contracts] ${buildDir} not found. Run \`truffle migrate\` first.`);
 }
 
-writeFileSync(outFile, JSON.stringify(deployments, null, 2) + "\n");
+// src/contracts/ only holds the git-ignored output, so a fresh clone doesn't have it.
+mkdirSync(dirname(outFile), { recursive: true });
+writeFileSync(outFile,JSON.stringify(deployments, null, 2) + "\n");
 const names = Object.keys(deployments);
 console.log(`[sync-contracts] network ${NETWORK_ID}: ${names.length ? names.join(", ") : "no deployed contracts"}`);
