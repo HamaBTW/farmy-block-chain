@@ -6,7 +6,7 @@ const ERC721_METADATA_ID = "0x5b5e139f";
 const URI = "ipfs://batch-1-tomatoes";
 const PRICE = web3.utils.toWei("100"); // 100 FRM (18 decimals)
 
-contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer]) => {
+contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transporter]) => {
   let registry;
 
   beforeEach(async () => {
@@ -103,6 +103,49 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer]) => {
     it("reverts for a price above uint128", async () => {
       const tooBig = web3.utils.toBN(2).pow(web3.utils.toBN(128)).toString();
       await expectRevert(registry.mintBatch(farmer, URI, tooBig, { from: farmer }), "SafeCastOverflowedUintDowncast(uint8,uint256)");
+    });
+  });
+
+  describe("transferCustody", () => {
+    beforeEach(async () => {
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+    });
+
+    it("starts with the farmer as custodian", async () => {
+      assert.equal(await registry.custodianOf(1), farmer);
+    });
+
+    it("moves custody and the NFT, and emits CustodyTransferred", async () => {
+      const tx = await registry.transferCustody(1, transporter, { from: farmer });
+      assert.equal(await registry.custodianOf(1), transporter);
+      assert.equal(await registry.ownerOf(1), transporter);
+      const ev = tx.logs.find((l) => l.event === "CustodyTransferred");
+      assert.equal(ev.args.batchId.toString(), "1");
+      assert.equal(ev.args.from, farmer);
+      assert.equal(ev.args.to, transporter);
+    });
+
+    it("does not emit CustodyTransferred on mint", async () => {
+      const tx = await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      assert.isUndefined(tx.logs.find((l) => l.event === "CustodyTransferred"));
+    });
+
+    it("emits CustodyTransferred for a plain ERC-721 transfer too", async () => {
+      const tx = await registry.transferFrom(farmer, transporter, 1, { from: farmer });
+      assert.equal(tx.logs.find((l) => l.event === "CustodyTransferred").args.to, transporter);
+    });
+
+    it("reverts when the caller is not the custodian", async () => {
+      await expectRevert(registry.transferCustody(1, transporter, { from: other }), "ERC721IncorrectOwner(address,uint256,address)");
+    });
+
+    it("reverts for the zero address", async () => {
+      await expectRevert(registry.transferCustody(1, ZERO_ADDRESS, { from: farmer }), "ERC721InvalidReceiver(address)");
+    });
+
+    it("reverts for an unknown batch", async () => {
+      await expectRevert(registry.transferCustody(99, transporter, { from: farmer }), "ERC721NonexistentToken(uint256)");
+      await expectRevert(registry.custodianOf(99), "ERC721NonexistentToken(uint256)");
     });
   });
 });

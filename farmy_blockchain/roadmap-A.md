@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A05 (`mintBatch` + `tokenURI` + `BatchMinted`/`PriceRecorded`; 15 tests passing)
-- **Next task:** A06: `transferCustody` + `custodianOf` + `CustodyTransferred`
+- **Last completed:** A06 (`transferCustody` + `custodianOf` + `CustodyTransferred`; 22 tests passing)
+- **Next task:** A07: `addCheckpoint` (inspector only, event-only storage)
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** waiting on B's review of `IBatchRegistry.sol` (A02)
 
@@ -23,7 +23,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A03 | Skeleton: `BatchRegistry is ERC721URIStorage, Ownable`, storage layout (packed `Batch` struct), constructor | Depends on: A01 | Done when: compiles, deploy test passes, `name()`/`symbol()`/`owner()` tested
 - [x] A04 | Admin: `setInspector(addr, bool)`, `setEscrow(addr)` (onlyOwner, zero-address checks) | Depends on: A03 | Done when: happy path, non-owner revert and zero-address revert tested
 - [x] A05 | `mintBatch(to, metadataURI, initialPrice)` + `tokenURI` + `BatchMinted` + first `PriceRecorded` | Depends on: A04 | Done when: mint, URI, initial price, events, zero-address and zero-price reverts tested
-- [ ] A06 | `transferCustody(batchId, newCustodian)` + `custodianOf` + `CustodyTransferred` | Depends on: A05 | Done when: only current custodian can transfer; revert paths and event tested
+- [x] A06 | `transferCustody(batchId, newCustodian)` + `custodianOf` + `CustodyTransferred` | Depends on: A05 | Done when: only current custodian can transfer; revert paths and event tested
 - [ ] A07 | `addCheckpoint(batchId, dataHash)` (inspector only, event-only storage) | Depends on: A04 | Done when: event args tested; non-inspector and unknown-batch reverts tested
 - [ ] A08 | `validateBatch(batchId)` + `isValidated` + `BatchValidated` | Depends on: A05 | Done when: inspector validates; non-inspector, unknown batch and double-validation reverts tested
 - [ ] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A02, A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against the frozen interface
@@ -53,6 +53,8 @@ Shared files touched by A are logged in the Decisions Log.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A06: `CustodyTransferred` emitted from an `_update` override for every non-mint transfer, so plain `transferFrom`/approved operators are also logged | Custody history in events is always complete
+- 2026-11-03 | A06: `transferCustody` reuses OZ `_transfer(msg.sender, …)` checks (`ERC721IncorrectOwner`, `ERC721InvalidReceiver`, `ERC721NonexistentToken`); no custom `NotCustodian` | Rules: don't duplicate OZ checks
 - 2026-11-03 | A05: `mintBatch` is open to anyone (the farmer) | idea1 has no minter role; inspector validation guards quality
 - 2026-11-03 | A05: no own zero-address check in `mintBatch`; OZ `_mint` reverts `ERC721InvalidReceiver` | Rules: don't duplicate OZ checks
 - 2026-11-03 | A05: `_mint` not `_safeMint` | No receiver callback, so cheaper and no reentrancy path; custodians are EOAs

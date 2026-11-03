@@ -23,6 +23,7 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     uint256 private _lastBatchId;
 
     event BatchMinted(uint256 indexed batchId, address indexed farmer);
+    event CustodyTransferred(uint256 indexed batchId, address indexed from, address indexed to);
     event PriceRecorded(uint256 indexed batchId, uint256 price);
 
     error ZeroAddress();
@@ -52,6 +53,14 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
         emit PriceRecorded(batchId, initialPrice);
     }
 
+    /// @notice Hands the physical goods (and the NFT) to the next custodian.
+    /// @param batchId The batch NFT id.
+    /// @param newCustodian Next holder (transporter, warehouse, retailer, buyer).
+    function transferCustody(uint256 batchId, address newCustodian) external {
+        // OZ checks: batch exists, caller is the custodian, receiver isn't zero.
+        _transfer(msg.sender, newCustodian, batchId);
+    }
+
     /// @notice Grants or revokes the inspector role.
     /// @param account Inspector address.
     /// @param allowed True to grant, false to revoke.
@@ -73,8 +82,20 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
         return _inspectors[account];
     }
 
+    /// @notice Address that currently holds the physical goods.
+    /// @param batchId The batch NFT id.
+    function custodianOf(uint256 batchId) external view returns (address) {
+        return _requireOwned(batchId);
+    }
+
     /// @notice Address allowed to record sale prices.
     function escrow() external view returns (address) {
         return _escrow;
+    }
+
+    /// @dev Every transfer is a custody change, including plain ERC-721 transfers.
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address from) {
+        from = super._update(to, tokenId, auth);
+        if (from != address(0)) emit CustodyTransferred(tokenId, from, to);
     }
 }
