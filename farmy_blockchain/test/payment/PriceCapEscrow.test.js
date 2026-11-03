@@ -9,6 +9,13 @@ const BATCH = 1;
 contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
   let registry, coin, escrow;
 
+  async function depositedSale(price = frm(115)) {
+    await escrow.createSale(BATCH, price, { from: seller });
+    await coin.mint(buyer, price, { from: authority });
+    await coin.approve(escrow.address, price, { from: buyer });
+    await escrow.deposit(1, { from: buyer });
+  }
+
   beforeEach(async () => {
     registry = await MockBatchRegistry.new();
     coin = await FarmCoin.new({ from: authority });
@@ -157,6 +164,68 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
 
     it("reverts for an unknown sale", async () => {
       await expectRevert(escrow.deposit(42, { from: buyer }), "WrongState(uint8)");
+    });
+  });
+
+  describe("releasePayment", () => {
+    beforeEach(depositedSale);
+
+    async function deliver() {
+      await registry.setValidated(BATCH, true);
+      await registry.setCustodian(BATCH, buyer);
+    }
+
+    it("pays the seller and records the new last price", async () => {
+      await deliver();
+      const tx = await escrow.releasePayment(1, { from: other });
+
+      assert.equal((await coin.balanceOf(seller)).toString(), frm(115));
+      assert.equal((await coin.balanceOf(escrow.address)).toString(), "0");
+      assert.equal((await escrow.getSale(1)).state, State.Released);
+      assert.equal((await registry.getLastPrice(BATCH)).toString(), frm(115));
+      assert.equal((await escrow.openSaleOf(BATCH)).toString(), "0");
+
+      const log = tx.logs[0];
+      assert.equal(log.event, "PaymentReleased");
+      assert.equal(log.args.saleId.toString(), "1");
+      assert.equal(log.args.seller, seller);
+      assert.equal(log.args.price.toString(), frm(115));
+    });
+
+    it("lets the buyer resell with the cap based on the new price", async () => {
+      await deliver();
+      await escrow.releasePayment(1);
+      await expectRevert(escrow.createSale(BATCH, frm(139), { from: buyer }), "PriceAboveCap(uint256,uint256)");
+      await escrow.createSale(BATCH, frm(138), { from: buyer });
+    });
+
+    it("reverts when the batch is not validated", async () => {
+      await registry.setCustodian(BATCH, buyer);
+      await expectRevert(escrow.releasePayment(1), "NotValidated()");
+    });
+
+    it("reverts when custody has not moved to the buyer", async () => {
+      await registry.setValidated(BATCH, true);
+      await expectRevert(escrow.releasePayment(1), "CustodyNotMoved()");
+    });
+
+    it("reverts on a second release", async () => {
+      await deliver();
+      await escrow.releasePayment(1);
+      await expectRevert(escrow.releasePayment(1), "WrongState(uint8)");
+    });
+
+    it("reverts before any deposit", async () => {
+      await registry.setBatch(2, frm(100), true, seller);
+      await escrow.createSale(2, frm(100), { from: seller });
+      await expectRevert(escrow.releasePayment(2), "WrongState(uint8)");
+    });
+
+    it("reverts when the registry does not accept this escrow", async () => {
+      await deliver();
+      await registry.setEscrow(other);
+      await expectRevert(escrow.releasePayment(1), "NotEscrow()");
+      assert.equal((await escrow.getSale(1)).state, State.Deposited);
     });
   });
 });

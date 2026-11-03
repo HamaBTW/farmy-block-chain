@@ -4,13 +4,14 @@ pragma solidity 0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
 
 /// @title PriceCapEscrow
 /// @notice Holds buyer FRM until delivery and caps the markup over the last declared price.
 /// @dev The contract owner is the market authority. Reads the registry only through IBatchRegistry.
-contract PriceCapEscrow is Ownable {
+contract PriceCapEscrow is Ownable, ReentrancyGuard {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -42,6 +43,7 @@ contract PriceCapEscrow is Ownable {
     event MarkupChanged(uint16 percent);
     event SaleCreated(uint256 indexed saleId, uint256 indexed batchId, address indexed seller, uint256 price);
     event Deposited(uint256 indexed saleId, address indexed buyer, uint256 price);
+    event PaymentReleased(uint256 indexed saleId, address indexed seller, uint256 price);
 
     error ZeroAddress();
     error ZeroPrice();
@@ -50,6 +52,8 @@ contract PriceCapEscrow is Ownable {
     error BatchAlreadyListed(uint256 saleId);
     error WrongState(SaleState state);
     error SellerCannotBuy();
+    error NotValidated();
+    error CustodyNotMoved();
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -100,6 +104,22 @@ contract PriceCapEscrow is Ownable {
         uint256 price = sale.price;
         emit Deposited(saleId, msg.sender, price);
         _coin.safeTransferFrom(msg.sender, address(this), price);
+    }
+
+    /// @notice Pays the seller once the batch is validated and custody is with the buyer.
+    ///         Callable by anyone; records the price as the batch's new last price.
+    /// @param saleId The sale id.
+    function releasePayment(uint256 saleId) external nonReentrant {
+        Sale memory sale = _sales[saleId];
+        if (sale.state != SaleState.Deposited) revert WrongState(sale.state);
+        if (!_registry.isValidated(sale.batchId)) revert NotValidated();
+        if (_registry.custodianOf(sale.batchId) != sale.buyer) revert CustodyNotMoved();
+
+        _sales[saleId].state = SaleState.Released;
+        delete _openSaleOf[sale.batchId];
+        emit PaymentReleased(saleId, sale.seller, sale.price);
+        _coin.safeTransfer(sale.seller, sale.price);
+        _registry.recordSalePrice(sale.batchId, sale.price);
     }
 
     /// @notice Full state of a sale (state None for an unknown id).

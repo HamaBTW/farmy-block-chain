@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B07 (`deposit`; 20 escrow tests passing)
-- **Next task:** B08: `releasePayment`
+- **Last completed:** B08 (`releasePayment`; 27 escrow tests passing)
+- **Next task:** B09: `refund`
 - **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** A02/B02 freeze waits on A confirming the review below
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -26,7 +26,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B05 | `PriceCapEscrow` skeleton: constructor(registry, coin, maxMarkupPercent) with zero-address checks, `Ownable` (owner = market authority), `setMaxMarkup` + `MarkupChanged`, view `maxMarkupPercent()` | Depends on: B03, B04 | Done when: deploy, setMaxMarkup happy/non-owner/event tested
 - [x] B06 | `createSale(batchId, price)`: seller must be `custodianOf`, `price > 0`, `price <= lastPrice * (100 + markup) / 100` + `SaleCreated` | Depends on: B04 | Done when: within-cap OK, cap edge (exactly cap) OK, over-cap revert (150 vs cap 120), non-custodian and zero-price reverts, event tested
 - [x] B07 | `deposit(saleId)`: buyer pulls `price` FRM via `SafeERC20.safeTransferFrom`, state `Created → Deposited` + `Deposited` | Depends on: B06 | Done when: balances moved, wrong state, no allowance, seller-as-buyer, unknown-sale reverts, event tested
-- [ ] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
+- [x] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
 - [ ] B09 | `refund(saleId)` (rule in Decisions Log, approved): state → `Refunded`, FRM back to buyer; `nonReentrant` + `Refunded` | Depends on: B07 | Done when: seller cancel, buyer refund while conditions unmet, buyer blocked once conditions met, double-refund and refund-after-release reverts, event tested
 - [ ] B10 | Coverage + gas pass | Depends on: B03–B09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
@@ -68,6 +68,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | B06 (fix): one open (Created/Deposited) sale per batch via `_openSaleOf[batchId]`, plus view `openSaleOf` | Without it one buyer depositing on two sales of the same batch lets the seller be paid twice; costs one SSTORE per sale, refunded on close
 - 2026-11-03 | B06 (fix): so a listing can't block a batch forever, a Created sale can be cancelled (via `refund`) by its seller, or by anyone once the seller is no longer custodian | Needed by the lock above; part of B09
 - 2026-11-03 | B07: `Deposited(saleId, buyer, price)` carries the price; unknown sale reverts `WrongState(None)` | UI can show locked amounts from events; no separate existence check needed
+- 2026-11-03 | B08: `releasePayment` callable by anyone, `nonReentrant`; state + open-sale lock cleared before the FRM transfer and `recordSalePrice` | idea1 lets anyone trigger release once conditions hold; CEI + guard per rules §4
+- 2026-11-03 | B08: if the registry rejects `recordSalePrice` the whole release reverts (sale stays Deposited) | Price history and payment must never diverge
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)
