@@ -12,7 +12,7 @@ const ALL: ContractName[] = ["BatchRegistry", "FarmCoin", "PriceCapEscrow"];
 
 /** Runs one or more MetaMask transactions and tracks pending/error state. */
 export function useContractTx() {
-  const { getSigner } = useWallet();
+  const { getSigner, mode } = useWallet();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +38,8 @@ export function useContractTx() {
     [getSigner],
   );
 
-  return { run, pending, error };
+  const pendingLabel = mode === "demo" ? "Sending…" : "Confirm in MetaMask…";
+  return { run, pending, error, pendingLabel };
 }
 
 /** Sends a transaction and waits for it to be mined. */

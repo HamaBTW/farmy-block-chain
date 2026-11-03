@@ -25,7 +25,7 @@
 | File | Status | Responsibility |
 |------|--------|----------------|
 | `farmy_web/tsconfig.json` | modify | `allowImportingTsExtensions` so tests import `./x.ts` |
-| `farmy_web/package.json` | modify | `"test": "node --test src/lib/"` |
+| `farmy_web/package.json` | modify | `"test": "node --test \"src/lib/*.test.ts\""` |
 | `src/app/globals.css` | rewrite | tokens light/dark, base styles, focus ring, reduced motion |
 | `src/app/layout.tsx` | rewrite | fonts, providers, header, footer, toast host |
 | `src/components/ui/Button.tsx` | new | `Button` variants |
@@ -69,7 +69,7 @@
 - `ToastProvider`, `useToast(): { show(message: string, tone?: "field" | "beet"): void }`
 - Tailwind color names: `paper card ink ink-soft line field field-ink harvest harvest-ink beet sky kraft kraft-ink` and `*-wash` for field/harvest/beet/sky; font utilities `font-display`, `font-sans`, `font-mono`.
 
-- [ ] **Step 1:** `tsconfig.json` add `"allowImportingTsExtensions": true` to `compilerOptions`; `package.json` scripts add `"test": "node --test src/lib/"`.
+- [ ] **Step 1:** `tsconfig.json` add `"allowImportingTsExtensions": true` to `compilerOptions`; `package.json` scripts add `"test": "node --test \"src/lib/*.test.ts\""`.
 - [ ] **Step 2:** Rewrite `globals.css`: `@import "tailwindcss";`, `:root` tokens from DESIGN_SYSTEM.md §2, dark tokens under `@media (prefers-color-scheme: dark)`, `@theme inline` mapping `--color-<name>: var(--<name>)` and fonts `--font-display/--font-sans/--font-mono`, `body { background: var(--paper); color: var(--ink); font-family: var(--font-sans) }`, `:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px }`, `.tabular { font-variant-numeric: tabular-nums }`, `@keyframes stamp-in` (scale 1.15→1, rotate -6deg→-2deg, 220ms) + `.stamp-in`, and `@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation: none !important; transition: none !important } }`. Keep `.input` component class: `w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-soft`.
 - [ ] **Step 3:** Primitives with the variants above. Button heights ≥ 40px (`h-10`, `sm` = `h-9`), radius `rounded-xl`, primary `bg-field text-field-ink hover:brightness-110`, secondary `bg-card border border-line`, danger `bg-beet text-white`, ghost `hover:bg-field-wash`. Chip `rounded-full px-2.5 py-0.5 text-xs font-medium` with `bg-<tone>-wash text-<tone>` (`text-harvest-ink` for harvest). Toast: fixed bottom-center stack, auto-hide 4000 ms, `role="status"`.
 - [ ] **Step 4:** `layout.tsx`: load `Bricolage_Grotesque` (variable `--font-bricolage`, weights 600–800), `Figtree` (`--font-figtree`), `Geist_Mono`; wrap `WalletProvider > PeopleProvider > ToastProvider`; render `<Header />` (Task UI03; until then keep the old nav markup), `<main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">`, footer "Simulated goods and money on a local test chain."
@@ -104,7 +104,7 @@ test("names Ganache accounts by index, extra accounts become guests", () => {
   const people = buildPeople(accounts, {});
   assert.deepEqual(people.slice(0, 7).map((p) => p.role), ["regulator", "inspector", "farmer", "transporter", "warehouse", "buyer", "retailer"]);
   assert.equal(people[2].name, "Farmer");
-  assert.equal(people[2].emoji, "🧑‍🌾");
+  assert.equal(people[2].emoji, "🚜");
   assert.equal(people[10].name, "Guest 4");
 });
 
@@ -130,7 +130,7 @@ export type Person = { address: string; index: number; name: string; emoji: stri
 const CAST: { name: string; emoji: string; role: PersonRole }[] = [
   { name: "Regulator", emoji: "🏛️", role: "regulator" },
   { name: "Inspector", emoji: "🔍", role: "inspector" },
-  { name: "Farmer", emoji: "🧑‍🌾", role: "farmer" },
+  { name: "Farmer", emoji: "🚜", role: "farmer" },
   { name: "Transporter", emoji: "🚚", role: "transporter" },
   { name: "Warehouse", emoji: "🏬", role: "warehouse" },
   { name: "Buyer", emoji: "🛒", role: "buyer" },
@@ -184,7 +184,7 @@ actAs(address: string): void;      // demo: choose person
 - [ ] **Step 2:** `demoAvailable`: `getReadProvider().getNetwork()` → `Number(chainId) === 1337`.
 - [ ] **Step 3:** `account = mode === "demo" ? demoAccount : metamaskAccount`; `isOnGanache = mode === "demo" ? demoAvailable : chainId === 1337`; `getSigner`: demo → `getReadProvider().getSigner(demoAccount)` (throws "Choose who you are first." if none, or "Demo mode only works on the local Ganache chain." if `!demoAvailable`); metamask → unchanged.
 - [ ] **Step 4:** `tx.ts`: replace `revertMessage` sentence building with `friendlyError` (Task UI04 provides it; in this task keep the existing function) and export `useContractTx` returning `{ run, pending, error, pendingLabel }` where `pendingLabel = mode === "demo" ? "Sending…" : "Confirm in MetaMask…"`.
-- [ ] **Step 5: Header** — logo "Farmy" (`font-display text-xl`, field green with 🌾), nav links Home, Batches (`/registry`), Market, Guide, People, active link underlined in field. Right side: in demo mode a button "Acting as 🧑‍🌾 Farmer ▾" opening a menu of people (`actAs`) + "Use MetaMask instead"; in metamask mode the MetaMask states (Install / Connect / Switch to Farmy / short address) + "Use Demo mode" when `demoAvailable`. When demo mode is on and `account` is null after people load, call `actAs(people[2].address)` (Farmer).
+- [ ] **Step 5: Header** — logo "Farmy" (`font-display text-xl`, field green with 🌾), nav links Home, Batches (`/registry`), Market, Guide, People, active link underlined in field. Right side: in demo mode a button "Acting as 🚜 Farmer ▾" opening a menu of people (`actAs`) + "Use MetaMask instead"; in metamask mode the MetaMask states (Install / Connect / Switch to Farmy / short address) + "Use Demo mode" when `demoAvailable`. When demo mode is on and `account` is null after people load, call `actAs(people[2].address)` (Farmer).
 - [ ] **Step 6:** Mobile: nav collapses into a "Menu" button below 768px.
 - [ ] **Step 7:** lint + build pass; in the browser switch person and see the header change. Commit `UI03: Demo mode and header person switcher`.
 
@@ -538,7 +538,7 @@ export function primaryStep(steps: Step[]): Step | undefined {
 **Interfaces — Consumes:** `usePeople`, `PersonPicker`, `TxButton`/`useContractTx`, `PRODUCTS`, `ORIGINS`, `batchUri`, `saveDoc`, `getDoc`, `hashFromUri`, `productEmoji`. **Produces:** `Tag({ batch: Batch; doc: BatchDoc | null; status: ReactNode; size?: "lg" | "sm" })`.
 
 - [ ] **Step 1: Tag** — kraft card (`bg-kraft text-kraft-ink rounded-lg`), cut top-left corner via `clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 14px)`, punched hole (12px circle `bg-paper` with inset border) top-left, product emoji + name in `font-display`, origin · quantity unit · harvest date, price `font-display text-4xl font-extrabold tabular` with "FRM", "held by" `PersonName`, status chips, shadow per DESIGN_SYSTEM §4. Without doc: "Batch #N" and "Details kept off-chain".
-- [ ] **Step 2: Grid** — `BatchGrid({ batches, sales })`: tags (`size="sm"`) as links to `/batch/{id}`, chips: Validated (field) / Not validated (plain), For sale (harvest) / Paid into escrow (harvest), held by. Empty: "No batches yet. Add the first one as 🧑‍🌾 Farmer."
+- [ ] **Step 2: Grid** — `BatchGrid({ batches, sales })`: tags (`size="sm"`) as links to `/batch/{id}`, chips: Validated (field) / Not validated (plain), For sale (harvest) / Paid into escrow (harvest), held by. Empty: "No batches yet. Add the first one as 🚜 Farmer."
 - [ ] **Step 3: Mint wizard** (`AddBatchWizard`, opened by "Add batch") — step 1 product tiles (PRODUCTS + "Other" with name input), step 2 origin chips (ORIGINS + "Other…"), quantity + unit (default from product), harvest date (`<input type="date">`, default today), step 3 price chips 50/100/150 + input, first holder `PersonPicker` (default me), review card shows the generated JSON and the URI. Submit `TxButton label="Add batch" done="Batch added"` → `saveDoc(doc)` then `mintBatch(holder, batchUri(doc), parseUnits(price))`; on success navigate to `/batch/{newId}` (from the `BatchMinted` log) and show "Download details (JSON)".
 - [ ] **Step 4: RegistryHome** — title "Batches", `NextStepBanner`, "Add batch" primary button, grid. Regulator drawer (Task UI09) only for the regulator.
 - [ ] **Step 5:** lint + build + test pass; browser: add a batch in Demo mode as Farmer, it appears as a tag. Commit `UI07: batch grid and add-batch wizard with generated metadata`.

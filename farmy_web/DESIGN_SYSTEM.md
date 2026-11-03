@@ -90,7 +90,7 @@ Touch targets: at least 40px high.
 
 ## 7. Icons and emoji
 Emoji are the icon set, and each one means one thing:
-- People: 🏛️ Regulator · 🔍 Inspector · 🧑‍🌾 Farmer · 🚚 Transporter · 🏬 Warehouse · 🛒 Buyer · 🧺 Retailer · 👤 Guest
+- People: 🏛️ Regulator · 🔍 Inspector · 🚜 Farmer · 🚚 Transporter · 🏬 Warehouse · 🛒 Buyer · 🧺 Retailer · 👤 Guest
 - Products: 🍅 Tomatoes · 🌾 Grain · 🐄 Cattle · 🫒 Olives · 🍊 Citrus · 📦 Other
 - Events: 🌱 added · 🤝 handed over · 📋 checked · ✅ validated · 🏷️ listed · 🔒 paid into escrow · 💸 released · ↩️ refunded
 
@@ -98,7 +98,7 @@ Emoji are the icon set, and each one means one thing:
 - Use people's words: **batch** (not token/NFT), **hand over** (not transfer custody), **pay into escrow** (not deposit), **release payment**, **refund**, **cancel listing**, **cap** (the max price).
 - An action keeps its name: button "List for sale" → toast "Listed for sale" → stamp "Listed at 115 FRM".
 - Errors say what happened and what to do, without apologizing: "This price is above the cap of 120 FRM. Lower it or ask the market authority to raise the markup."
-- Empty states invite an action: "No batches yet. Add the first one as 🧑‍🌾 Farmer."
+- Empty states invite an action: "No batches yet. Add the first one as 🚜 Farmer."
 - Every screen footer keeps: "Simulated goods and money on a local test chain."
 
 ## 9. Checklist for a new screen

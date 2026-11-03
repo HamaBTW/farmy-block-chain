@@ -10,11 +10,13 @@ import { getContract } from "@/lib/contracts";
 import { ROLE_JOBS, type Person } from "@/lib/people";
 import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
 import { useChainVersion } from "@/lib/useChainVersion";
+import { useWallet } from "@/lib/wallet/WalletProvider";
 
 /** Shared screen: the demo cast with their roles, balances and editable names. */
 export function PeopleHome() {
   const { people, loaded, chainRoles, reset } = usePeople();
   const balances = useBalances(people);
+  const { account, mode, demoAvailable, actAs } = useWallet();
 
   return (
     <div className="space-y-6">
@@ -52,6 +54,13 @@ export function PeopleHome() {
               <PersonName address={p.address} showAddress />
               <span className="font-semibold tabular">{balances[p.address] ?? "…"}</span>
             </div>
+            {demoAvailable && (
+              mode === "demo" && account?.toLowerCase() === p.address.toLowerCase() ? (
+                <p className="text-sm font-semibold text-field">You are acting as {p.name}.</p>
+              ) : (
+                <Button size="sm" onClick={() => actAs(p.address)}>Act as {p.name}</Button>
+              )
+            )}
           </Card>
         ))}
       </div>

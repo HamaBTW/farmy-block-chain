@@ -5,7 +5,7 @@ export type Person = { address: string; index: number; name: string; emoji: stri
 const CAST: { name: string; emoji: string; role: PersonRole }[] = [
   { name: "Regulator", emoji: "🏛️", role: "regulator" },
   { name: "Inspector", emoji: "🔍", role: "inspector" },
-  { name: "Farmer", emoji: "🧑‍🌾", role: "farmer" },
+  { name: "Farmer", emoji: "🚜", role: "farmer" },
   { name: "Transporter", emoji: "🚚", role: "transporter" },
   { name: "Warehouse", emoji: "🏬", role: "warehouse" },
   { name: "Buyer", emoji: "🛒", role: "buyer" },

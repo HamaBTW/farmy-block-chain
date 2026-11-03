@@ -39,7 +39,7 @@ Routes `/registry` and `/market` keep their paths so links in `DEMO.md` and `REA
 
 Wireframes (desktop; mobile stacks top to bottom in the same order):
 ```
-Header: [Farmy]  Home  Batches  Market  Guide  People        [Acting as: 🧑‍🌾 Farmer ▾]
+Header: [Farmy]  Home  Batches  Market  Guide  People        [Acting as: 🚜 Farmer ▾]
 ────────────────────────────────────────────────────────────────────────────────────
 Next step banner: "Batch #1 waits for an inspector. Switch to 🔍 Inspector"  [Switch]
 
@@ -116,7 +116,7 @@ The journey page renders A's `BatchJourney` and passes B's `SalePanel` into its 
 ## 9. Errors and empty states
 - No Ganache / no contracts: full-width setup card linking to the guide, no broken screens.
 - Unknown batch id: "Batch #N doesn't exist" + link to Batches.
-- Empty lists say what to do: "No batches yet. Add the first one as 🧑‍🌾 Farmer."
+- Empty lists say what to do: "No batches yet. Add the first one as 🚜 Farmer."
 - MetaMask rejection: "You cancelled the transaction in MetaMask."
 
 ## 10. Verification

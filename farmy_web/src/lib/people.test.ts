@@ -8,7 +8,7 @@ test("names Ganache accounts by index, extra accounts become guests", () => {
   const people = buildPeople(accounts, {});
   assert.deepEqual(people.slice(0, 7).map((p) => p.role), ["regulator", "inspector", "farmer", "transporter", "warehouse", "buyer", "retailer"]);
   assert.equal(people[2].name, "Farmer");
-  assert.equal(people[2].emoji, "🧑‍🌾");
+  assert.equal(people[2].emoji, "🚜");
   assert.equal(people[10].name, "Guest 4");
 });
 
