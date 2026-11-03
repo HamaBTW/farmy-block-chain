@@ -64,3 +64,21 @@ export function canDo(st: Step, me: string | null, isInspector: boolean): boolea
 export function primaryStep(steps: Step[]): Step | undefined {
   return steps.find((s) => s.primary);
 }
+
+/** Steps handled by the registry screens (A); every other step is a market step (B). */
+export const REGISTRY_ACTIONS: StepAction[] = ["validate", "addCheckpoint", "handOver"];
+
+/** "Waiting for <who> to <phrase>." */
+export const STEP_PHRASES: Record<StepAction, string> = {
+  addCheckpoint: "add a checkpoint",
+  validate: "validate this batch",
+  handOver: "hand it over",
+  listForSale: "list it for sale",
+  cancelListing: "cancel the listing",
+  buy: "buy it",
+  clearListing: "clear the old listing",
+  handToBuyer: "hand the goods to the buyer",
+  release: "release the payment",
+  refundBuyer: "refund the buyer",
+  refundMe: "take the money back",
+};

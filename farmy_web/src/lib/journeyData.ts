@@ -1,5 +1,5 @@
 import type { Contract, EventLog } from "ethers";
-import type { JourneyState, OpenSale } from "./journey";
+import type { JourneyState, OpenSale, Step } from "./journey";
 
 /** A batch as screens show it: its journey state plus the metadata URI. */
 export type BatchView = JourneyState & { uri: string };
@@ -38,3 +38,6 @@ export async function loadAllBatchViews(registry: Contract, escrow: Contract | n
   const ids = await loadBatchIds(registry);
   return Promise.all(ids.map((id) => loadBatchView(registry, escrow, id)));
 }
+
+/** What the journey page hands to the market panel (B) so it can render the sale steps of this batch. */
+export type SaleContext = { batch: BatchView; steps: Step[]; me: string; onDone: () => void };

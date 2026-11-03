@@ -1,0 +1,239 @@
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { BatchChips, batchDocOf } from "@/components/ui/BatchChips";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { PersonName } from "@/components/ui/PersonName";
+import { PersonPicker } from "@/components/ui/PersonPicker";
+import { sortStamps, StampList, type StampItem } from "@/components/ui/Stamp";
+import { Tag } from "@/components/ui/Tag";
+import { TxButton } from "@/components/ui/TxButton";
+import { downloadDoc, getDoc, saveDoc } from "@/lib/docStore";
+import { formatFrm } from "@/lib/format";
+import { canDo, nextSteps, primaryStep, REGISTRY_ACTIONS, STEP_PHRASES, type Step } from "@/lib/journey";
+import type { BatchView, SaleContext } from "@/lib/journeyData";
+import { hashDoc, hashFromUri, parseDoc } from "@/lib/metadata";
+import { findPerson } from "@/lib/people";
+import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
+import { personForWho } from "@/lib/people/resolveWho";
+import { mined } from "@/lib/tx";
+import { useBatchView } from "@/lib/useBatchViews";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { CheckpointForm } from "./CheckpointForm";
+import type { HistoryItem } from "./registry";
+import { useBatchDetail, useRegistry } from "./useRegistry";
+
+type Props = {
+  batchId: bigint;
+  version: number;
+  reload: () => void;
+  /** Market events of this batch (from B), merged into the timeline. */
+  saleStamps: StampItem[];
+  /** Market steps of this batch (from B), shown in the Next step card. */
+  salePanel: (ctx: SaleContext) => ReactNode;
+};
+
+/** Person A: one batch's journey: the tag, what happens next, and every stamp so far. */
+export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }: Props) {
+  const registry = useRegistry();
+  const { batch, loaded } = useBatchView(batchId, version);
+  const { history } = useBatchDetail(registry, batchId, version);
+  const [loadedAt] = useState(() => Math.floor(Date.now() / 1000));
+  const [docVersion, setDocVersion] = useState(0);
+
+  const stamps = useMemo(() => sortStamps([...registryStamps(history), ...saleStamps]), [history, saleStamps]);
+  const fresh = useMemo(() => new Set(stamps.filter((s) => s.timestamp >= loadedAt).map((s) => s.key)), [stamps, loadedAt]);
+
+  if (loaded && !batch) {
+    return (
+      <Card>
+        <h1 className="font-display text-2xl font-bold">Batch #{batchId.toString()} doesn&apos;t exist</h1>
+        <Link href="/registry" className="mt-2 inline-block font-semibold text-sky underline">
+          See all batches
+        </Link>
+      </Card>
+    );
+  }
+  if (!batch) return <p className="text-ink-soft">Loading batch #{batchId.toString()}…</p>;
+
+  // docVersion: re-read the stored details after a successful "Verify a file".
+  const doc = docVersion >= 0 ? batchDocOf(batch.uri) : null;
+
+  return (
+    <div className="space-y-6">
+      <Link href="/registry" className="text-sm font-semibold text-ink-soft hover:text-ink">
+        ← All batches
+      </Link>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="space-y-5 lg:col-span-5">
+          <Tag size="lg" batchId={batch.batchId} doc={doc} price={batch.lastPrice} holder={batch.custodian} chips={<BatchChips batch={batch} />} />
+          <DetailsActions uri={batch.uri} hasDoc={!!doc} batchId={batch.batchId} onVerified={() => setDocVersion((v) => v + 1)} />
+          <NextStep batch={batch} onDone={reload} salePanel={salePanel} />
+        </div>
+        <Card className="lg:col-span-7">
+          <h2 className="mb-4 font-display text-xl font-bold">Journey</h2>
+          <StampList items={stamps} fresh={fresh} />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () => void; salePanel: (ctx: SaleContext) => ReactNode }) {
+  const { account, isOnGanache, mode, actAs } = useWallet();
+  const { people, chainRoles } = usePeople();
+  const isInspector = hasChainRole(chainRoles, "inspector", account);
+  const steps = nextSteps(batch);
+  const primary = primaryStep(steps);
+  const mine = steps.filter((s) => canDo(s, account, isInspector));
+  const registrySteps = mine.filter((s) => REGISTRY_ACTIONS.includes(s.action));
+  const saleSteps = mine.filter((s) => !REGISTRY_ACTIONS.includes(s.action));
+  const waitingFor = primary && !canDo(primary, account, isInspector) ? primary : null;
+  const target = waitingFor ? personForWho(waitingFor.who, people, chainRoles) : undefined;
+  const regulator = findPerson(people, chainRoles.regulator);
+
+  return (
+    <Card className="space-y-4">
+      <h2 className="font-display text-xl font-bold">Next step</h2>
+      {!account || !isOnGanache ? (
+        <p className="text-sm text-ink-soft">Choose who you are in the top right corner to act on this batch.</p>
+      ) : (
+        <>
+          {waitingFor && (
+            <div className="rounded-xl bg-sky-wash p-3 text-sm">
+              {waitingFor.who.kind === "inspector" && !target ? (
+                <p>
+                  No one is an inspector yet. {regulator ? `${regulator.emoji} ${regulator.name}` : "The regulator"} can make someone an inspector in
+                  Batches → Regulator tools.
+                </p>
+              ) : (
+                <p>
+                  Waiting for <b>{target ? `${target.emoji} ${target.name}` : "someone else"}</b> to {STEP_PHRASES[waitingFor.action]}.
+                </p>
+              )}
+              {mode === "demo" && (target ?? (waitingFor.who.kind === "inspector" ? regulator : undefined)) && (
+                <Button size="sm" className="mt-2" onClick={() => actAs((target ?? regulator)!.address)}>
+                  Switch to {(target ?? regulator)!.name}
+                </Button>
+              )}
+            </div>
+          )}
+          {registrySteps.map((s) => (
+            <RegistryStep key={s.action} step={s} batch={batch} onDone={onDone} />
+          ))}
+          {salePanel({ batch, steps: saleSteps, me: account, onDone })}
+          {mine.length === 0 && !waitingFor && <p className="text-sm text-ink-soft">Nothing for you to do on this batch right now.</p>}
+        </>
+      )}
+    </Card>
+  );
+}
+
+function RegistryStep({ step, batch, onDone }: { step: Step; batch: BatchView; onDone: () => void }) {
+  const [to, setTo] = useState("");
+  const variant = step.primary ? "primary" : "secondary";
+
+  if (step.action === "validate") {
+    return (
+      <TxButton label="Validate batch" done="Batch validated" variant={variant} send={(signed) => mined(signed("BatchRegistry").validateBatch(batch.batchId))} onDone={onDone} />
+    );
+  }
+  if (step.action === "addCheckpoint") {
+    return (
+      <details className="rounded-xl border border-line p-3">
+        <summary className="cursor-pointer text-sm font-semibold">📋 Add checkpoint</summary>
+        <div className="mt-3">
+          <CheckpointForm batchId={batch.batchId} onDone={onDone} />
+        </div>
+      </details>
+    );
+  }
+  return (
+    <details className="rounded-xl border border-line p-3" open={step.primary}>
+      <summary className="cursor-pointer text-sm font-semibold">🤝 Hand over to someone</summary>
+      <div className="mt-3 space-y-3">
+        <PersonPicker label="Who receives the goods" value={to} onChange={setTo} exclude={[batch.custodian]} />
+        <TxButton
+          label="Hand over"
+          done="Handed over"
+          variant={variant}
+          disabled={!to}
+          send={(signed) => mined(signed("BatchRegistry").transferCustody(batch.batchId, to))}
+          onDone={() => {
+            setTo("");
+            onDone();
+          }}
+        />
+      </div>
+    </details>
+  );
+}
+
+/** Download the off-chain details, or check a JSON file against the on-chain fingerprint. */
+function DetailsActions({ uri, hasDoc, batchId, onVerified }: { uri: string; hasDoc: boolean; batchId: bigint; onVerified: () => void }) {
+  const [result, setResult] = useState<"match" | "nomatch" | null>(null);
+  const hash = hashFromUri(uri);
+  if (!hash) return <p className="text-xs text-ink-soft">Metadata: <span className="font-mono">{uri || "none"}</span></p>;
+
+  if (hasDoc) {
+    const doc = getDoc(hash)!;
+    return (
+      <Button size="sm" onClick={() => downloadDoc(doc, `farmy-batch-${batchId}.json`)}>
+        Download details (JSON)
+      </Button>
+    );
+  }
+  return (
+    <label className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="font-semibold">Have the details file?</span>
+      <input
+        type="file"
+        accept="application/json,.json"
+        className="text-sm"
+        onChange={async (e) => {
+          const text = await e.target.files?.[0]?.text();
+          const doc = text ? parseDoc(text) : null;
+          const ok = !!doc && hashDoc(doc) === hash;
+          setResult(ok ? "match" : "nomatch");
+          if (ok) {
+            saveDoc(doc);
+            onVerified();
+          }
+        }}
+      />
+      {result === "match" && <Chip tone="field">Matches the batch</Chip>}
+      {result === "nomatch" && <Chip tone="beet">Doesn&apos;t match this batch</Chip>}
+    </label>
+  );
+}
+
+/** Registry events as stamps. The mint's PriceRecorded is folded into the "added" stamp. */
+function registryStamps(history: HistoryItem[]): StampItem[] {
+  const mintTx = new Set(history.filter((h) => h.kind === "BatchMinted").map((h) => h.txHash));
+  const mintPrice = new Map(history.filter((h) => h.kind === "PriceRecorded" && mintTx.has(h.txHash)).map((h) => [h.txHash, h.args.price]));
+
+  return history.flatMap((h): StampItem[] => {
+    const base = { key: `r-${h.blockNumber}-${h.logIndex}`, blockNumber: h.blockNumber, logIndex: h.logIndex, timestamp: h.timestamp };
+    switch (h.kind) {
+      case "BatchMinted":
+        return [{ ...base, emoji: "🌱", tone: "field", title: <>Added by <PersonName address={h.args.farmer} showAddress={false} /></>, detail: mintPrice.has(h.txHash) ? `First price ${formatFrm(mintPrice.get(h.txHash)!)}` : undefined }];
+      case "CustodyTransferred":
+        return [{ ...base, emoji: "🤝", tone: "sky", title: <>Handed to <PersonName address={h.args.to} showAddress={false} /></>, detail: <>from <PersonName address={h.args.from} showAddress={false} /></> }];
+      case "CheckpointAdded":
+        return [{ ...base, emoji: "📋", tone: "sky", title: <>Checked by <PersonName address={h.args.inspector} showAddress={false} /></>, detail: checkpointDetail(h.args.dataHash) }];
+      case "BatchValidated":
+        return [{ ...base, emoji: "✅", tone: "field", title: <>Validated by <PersonName address={h.args.inspector} showAddress={false} /></> }];
+      case "PriceRecorded":
+        return mintTx.has(h.txHash) ? [] : [{ ...base, emoji: "📈", tone: "field", title: `New last price ${formatFrm(h.args.price)}` }];
+    }
+  });
+}
+
+function checkpointDetail(dataHash: string): string {
+  const doc = getDoc(dataHash);
+  if (doc?.schema !== "farmy.checkpoint.v1") return "Record kept off-chain";
+  return [`${doc.weightKg} kg`, `${doc.temperatureC} °C`, doc.location, doc.note].filter(Boolean).join(" · ");
+}

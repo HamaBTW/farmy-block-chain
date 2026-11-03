@@ -57,3 +57,8 @@ test("addresses compare case-insensitively and inspectors are recognized", () =>
   assert.equal(canDo(handOver, "0xF", false), true);
   assert.equal(canDo(handOver, null, false), false);
 });
+
+test("every action has a phrase", async () => {
+  const { STEP_PHRASES } = await import("./journey.ts");
+  assert.equal(Object.keys(STEP_PHRASES).length, 11);
+});

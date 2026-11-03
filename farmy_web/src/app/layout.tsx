@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Bricolage_Grotesque, Figtree, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/Header";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -22,7 +23,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <WalletProvider>
           <PeopleProvider>
             <ToastProvider>
-              <Header />
+              <Suspense>
+                <Header />
+              </Suspense>
               <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
               <footer className="px-4 py-6 text-center text-xs text-ink-soft">Simulated goods and money on a local test chain.</footer>
             </ToastProvider>
