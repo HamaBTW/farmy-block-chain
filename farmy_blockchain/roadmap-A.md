@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A11 (`migrations/1_deploy_registry.js`; deployed to Ganache, UI shows it)
-- **Next task:** A12: UI batch list + detail. A09b runs whenever B finishes the A02 review
+- **Last completed:** A12 (UI `/registry`: batch list + detail with event history; lint + build pass)
+- **Next task:** A13: UI mint batch form. A09b runs whenever B finishes the A02 review
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
 
@@ -34,7 +34,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A11 | `migrations/1_deploy_registry.js` (shared) + `npm run migrate` syncs to UI | Depends on: A10 | Done when: deployed on Ganache, `/` shows "BatchRegistry deployed ✅"
 
 ### Phase 4 — UI (`farmy_web/src/features/registry/`)
-- [ ] A12 | Batch list + detail (reads `custodianOf`, `isValidated`, `getLastPrice`, `tokenURI`; history from events) | Depends on: A11 | Done when: works on Ganache, `npm run build` passes
+- [x] A12 | Batch list + detail (reads `custodianOf`, `isValidated`, `getLastPrice`, `tokenURI`; history from events) | Depends on: A11 | Done when: works on Ganache, `npm run build` passes
 - [ ] A13 | Mint batch form (MetaMask-signed) | Depends on: A12 | Done when: mint from MetaMask shows up in the list
 - [ ] A14 | Custody transfer + inspector actions (add checkpoint, validate) | Depends on: A12 | Done when: each action works from MetaMask; unauthorized accounts see the contract revert message
 - [ ] A15 | Regulator panel: set inspector, set escrow | Depends on: A12 | Done when: owner can set both from the UI; other accounts are refused
@@ -69,6 +69,7 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A12: the batch list comes from `BatchMinted` events (no ERC721Enumerable); list and detail are on one `/registry` page with no new routes | No extra on-chain storage; shared `src/app/` routing untouched
 - 2026-11-03 | A11: added shared `migrations/1_deploy_registry.js` (deploy only, no demo roles) | Inspectors and escrow are set by the regulator (UI panel A15) and B's migration
 - 2026-11-03 | A10: added dev dependency `eth-gas-reporter@0.2.27`, opt-in through `GAS_REPORT=1` in shared `truffle-config.js` (`npm run test:gas`) | Rules §6 asks for a gas report; opt-in keeps `npm test` fast
 - 2026-11-03 | A09: split off A09b (re-check against frozen interface) | A02 review not done yet; rule 11 (split instead of claiming frozen)

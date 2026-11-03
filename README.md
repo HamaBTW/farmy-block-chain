@@ -33,7 +33,7 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A09b | ⏳ | Re-check against frozen interface (after A02) |
 | A10 | ✅ | Coverage + gas report (41 tests, `npm run test:gas`) |
 | A11 | ✅ | Registry migration (`npm run migrate`) |
-| A12 | ⬜ | UI: batch list + detail |
+| A12 | ✅ | UI: batch list + detail with event history (`/registry`) |
 | A13 | ⬜ | UI: mint form |
 | A14 | ⬜ | UI: custody + inspector actions |
 | A15 | ⬜ | UI: regulator panel |
