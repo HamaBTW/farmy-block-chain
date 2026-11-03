@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Contract } from "ethers";
+import { isAddress, type Contract } from "ethers";
 import { getContract } from "@/lib/contracts";
 import { loadSales, type Sale } from "./sales";
 
@@ -39,6 +39,23 @@ export function useMarketInfo(market: MarketContracts | null, account: string | 
 
   const isAuthority = !!info && !!account && info.authority.toLowerCase() === account.toLowerCase();
   return { info, isAuthority };
+}
+
+/** Live FRM balance of any address, or null while unknown (never another address's old value). */
+export function useBalance(account: string, version: number): bigint | null {
+  const [state, setState] = useState<{ account: string; value: bigint } | null>(null);
+
+  useEffect(() => {
+    const coin = getContract("FarmCoin");
+    if (!coin || !isAddress(account)) return;
+    let live = true;
+    coin.balanceOf(account).then((value: bigint) => live && setState({ account, value })).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [account, version]);
+
+  return state?.account === account ? state.value : null;
 }
 
 /** All escrow sales with live state. */
