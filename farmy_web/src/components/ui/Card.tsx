@@ -1,0 +1,9 @@
+import type { ReactNode } from "react";
+
+export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <section className={`rounded-2xl border border-line bg-card p-5 ${className}`}>{children}</section>;
+}
+
+export function CardTitle({ children }: { children: ReactNode }) {
+  return <h2 className="font-display text-xl font-bold mb-3">{children}</h2>;
+}

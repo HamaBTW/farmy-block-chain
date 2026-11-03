@@ -1,44 +1,135 @@
 @import "tailwindcss";
 
+/* Farmy design tokens. Rules and meaning: farmy_web/DESIGN_SYSTEM.md */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #f1f3ea;
+  --card: #ffffff;
+  --ink: #1c2a20;
+  --ink-soft: #4f5e53;
+  --line: #d9decf;
+  --field: #2e5e3a;
+  --field-ink: #ffffff;
+  --harvest: #c98a12;
+  --harvest-ink: #7a5000;
+  --beet: #a23b4b;
+  --sky: #2f6f96;
+  --kraft: #e8d6b0;
+  --kraft-ink: #4a3720;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #121a14;
+    --card: #1a241d;
+    --ink: #e7ede3;
+    --ink-soft: #a9b5ab;
+    --line: #2c3a30;
+    --field: #7cc48a;
+    --field-ink: #0e1a11;
+    --harvest: #e6b54a;
+    --harvest-ink: #f0c66a;
+    --beet: #e3828f;
+    --sky: #7db5d8;
+    --kraft: #3a3022;
+    --kraft-ink: #ebddbf;
   }
+}
+
+:root {
+  --field-wash: color-mix(in srgb, var(--field) 12%, var(--card));
+  --harvest-wash: color-mix(in srgb, var(--harvest) 16%, var(--card));
+  --beet-wash: color-mix(in srgb, var(--beet) 12%, var(--card));
+  --sky-wash: color-mix(in srgb, var(--sky) 12%, var(--card));
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-field-ink: var(--field-ink);
+  --color-field-wash: var(--field-wash);
+  --color-harvest: var(--harvest);
+  --color-harvest-ink: var(--harvest-ink);
+  --color-harvest-wash: var(--harvest-wash);
+  --color-beet: var(--beet);
+  --color-beet-wash: var(--beet-wash);
+  --color-sky: var(--sky);
+  --color-sky-wash: var(--sky-wash);
+  --color-kraft: var(--kraft);
+  --color-kraft-ink: var(--kraft-ink);
+  --font-display: var(--font-bricolage);
+  --font-sans: var(--font-figtree);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes stamp-in {
+  from {
+    transform: scale(1.15) rotate(-6deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-2deg);
+    opacity: 1;
+  }
+}
+
+.stamp-in {
+  animation: stamp-in 220ms ease-out both;
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.toast-in {
+  animation: toast-in 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @layer components {
+  .input {
+    @apply w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-soft;
+  }
+  /* Old screen classes, restyled until UI07–UI10 replace those screens (removed in UI10). */
   .card {
-    @apply rounded-xl border border-black/10 dark:border-white/15 p-5;
+    @apply rounded-2xl border border-line bg-card p-5;
   }
   .btn {
-    @apply rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50;
+    @apply inline-flex h-10 items-center rounded-xl bg-field px-4 text-sm font-semibold text-field-ink disabled:opacity-50;
   }
   .btn-warn {
-    @apply bg-amber-600 hover:bg-amber-700;
-  }
-  .input {
-    @apply w-full rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2 text-sm;
+    @apply bg-beet text-white;
   }
   .pill {
-    @apply rounded-full border border-black/15 dark:border-white/20 px-3 py-1 text-sm;
+    @apply rounded-full border border-line px-3 py-1 text-sm;
   }
 }

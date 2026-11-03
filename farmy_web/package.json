@@ -9,7 +9,8 @@
     "prebuild": "npm run sync-contracts",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test src/lib/"
   },
   "dependencies": {
     "ethers": "6.17.0",
