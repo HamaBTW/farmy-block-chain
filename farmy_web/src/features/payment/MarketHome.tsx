@@ -3,7 +3,9 @@
 import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { AuthorityPanel } from "./AuthorityPanel";
-import { formatFrm, useMarketContracts, useMarketInfo } from "./useMarket";
+import { CreateSaleForm } from "./CreateSaleForm";
+import { SalesList } from "./SalesList";
+import { formatFrm, useMarketContracts, useMarketInfo, useSales } from "./useMarket";
 
 /** Person B: FarmCoin + PriceCapEscrow screens (balances, sales, deposit, release, refund). */
 export function MarketHome() {
@@ -11,6 +13,7 @@ export function MarketHome() {
   const { account, isOnGanache } = useWallet();
   const { version, reload } = useChainVersion();
   const { info, isAuthority } = useMarketInfo(market, account, version);
+  const { sales, error, loaded } = useSales(market, version);
 
   if (!market) {
     return (
@@ -41,6 +44,11 @@ export function MarketHome() {
       </section>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-4">
+          <section className="card space-y-3">
+            <h2 className="font-semibold">Sales</h2>
+            {!loaded ? <p className="text-sm opacity-60">Loading…</p> : <SalesList sales={sales} />}
+            {error && <p className="text-sm text-red-500">{error}</p>}
+          </section>
           {!canWrite && (
             <section className="card">
               <p className="text-sm opacity-60">Connect MetaMask on the Farmy network to trade.</p>
@@ -48,9 +56,14 @@ export function MarketHome() {
           )}
         </div>
         {canWrite && info && (
-          <section className="card">
-            <AuthorityPanel key={account} account={account} isAuthority={isAuthority} markup={info.markup} onDone={reload} />
-          </section>
+          <div className="space-y-4">
+            <section className="card">
+              <CreateSaleForm market={market} account={account} markup={info.markup} version={version} onDone={reload} />
+            </section>
+            <section className="card">
+              <AuthorityPanel key={account} account={account} isAuthority={isAuthority} markup={info.markup} onDone={reload} />
+            </section>
+          </div>
         )}
       </div>
     </div>

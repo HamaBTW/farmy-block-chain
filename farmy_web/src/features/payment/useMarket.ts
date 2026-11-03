@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatUnits, type Contract } from "ethers";
 import { getContract } from "@/lib/contracts";
+import { loadSales, type Sale } from "./sales";
 
 export type MarketContracts = { coin: Contract; escrow: Contract; registry: Contract };
 
@@ -38,6 +39,24 @@ export function useMarketInfo(market: MarketContracts | null, account: string | 
 
   const isAuthority = !!info && !!account && info.authority.toLowerCase() === account.toLowerCase();
   return { info, isAuthority };
+}
+
+/** All escrow sales with live state. */
+export function useSales(market: MarketContracts | null, version: number) {
+  const [state, setState] = useState<{ sales: Sale[]; error: string | null; loaded: boolean }>({ sales: [], error: null, loaded: false });
+
+  useEffect(() => {
+    if (!market) return;
+    let live = true;
+    loadSales(market)
+      .then((sales) => live && setState({ sales, error: null, loaded: true }))
+      .catch((e: Error) => live && setState({ sales: [], error: e.message, loaded: true }));
+    return () => {
+      live = false;
+    };
+  }, [market, version]);
+
+  return state;
 }
 
 export function formatFrm(value: bigint): string {
