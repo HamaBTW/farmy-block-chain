@@ -34,6 +34,8 @@ contract PriceCapEscrow is Ownable {
     uint16 private _maxMarkupPercent;
     uint64 private _lastSaleId;
     mapping(uint256 => Sale) private _sales;
+    /// @dev batchId => its sale that is Created or Deposited (0 = none). One open sale per batch.
+    mapping(uint256 => uint256) private _openSaleOf;
 
     event MarkupChanged(uint16 percent);
     event SaleCreated(uint256 indexed saleId, uint256 indexed batchId, address indexed seller, uint256 price);
@@ -42,6 +44,7 @@ contract PriceCapEscrow is Ownable {
     error ZeroPrice();
     error NotCustodian();
     error PriceAboveCap(uint256 price, uint256 cap);
+    error BatchAlreadyListed(uint256 saleId);
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -60,18 +63,21 @@ contract PriceCapEscrow is Ownable {
         _setMaxMarkup(percent);
     }
 
-    /// @notice Lists a batch for sale. Only the current custodian can list it.
+    /// @notice Lists a batch for sale. Only the current custodian can list it, once at a time.
     /// @param batchId The batch NFT id.
     /// @param price Sale price in FRM base units, at most lastPrice * (100 + markup) / 100.
     /// @return saleId Id of the new sale (starts at 1).
     function createSale(uint256 batchId, uint256 price) external returns (uint256 saleId) {
         if (price == 0) revert ZeroPrice();
+        uint256 openSaleId = _openSaleOf[batchId];
+        if (openSaleId != 0) revert BatchAlreadyListed(openSaleId);
         if (_registry.custodianOf(batchId) != msg.sender) revert NotCustodian();
         uint256 cap = (_registry.getLastPrice(batchId) * (100 + uint256(_maxMarkupPercent))) / 100;
         if (price > cap) revert PriceAboveCap(price, cap);
 
         saleId = ++_lastSaleId;
         _sales[saleId] = Sale(msg.sender, SaleState.Created, batchId.toUint64(), address(0), price.toUint96());
+        _openSaleOf[batchId] = saleId;
         emit SaleCreated(saleId, batchId, msg.sender, price);
     }
 
@@ -79,6 +85,12 @@ contract PriceCapEscrow is Ownable {
     /// @param saleId The sale id.
     function getSale(uint256 saleId) external view returns (Sale memory) {
         return _sales[saleId];
+    }
+
+    /// @notice Open (Created or Deposited) sale of a batch, 0 if none.
+    /// @param batchId The batch NFT id.
+    function openSaleOf(uint256 batchId) external view returns (uint256) {
+        return _openSaleOf[batchId];
     }
 
     /// @notice Current max markup in percent.

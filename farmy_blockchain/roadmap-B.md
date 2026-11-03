@@ -65,7 +65,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | B05: `registry()` and `coin()` views on the escrow | UI needs the coin address for `approve`; immutables are cheap to read
 - 2026-11-03 | B06: added view `getSale(saleId)` returning the `Sale` struct | UI needs the live state/buyer to show release and refund buttons; events alone don't give current state cheaply
 - 2026-11-03 | B06: cap rounds down (`lastPrice * (100 + markup) / 100`) and `price == cap` is allowed | idea1 formula uses `<=`
-- 2026-11-03 | B06: several open sales per batch are allowed; only the custodian can list, and release needs custody with that sale's buyer, so at most one can be released | Extra 'active sale' mapping would cost one more SSTORE per sale for no safety gain
+- 2026-11-03 | B06 (fix): one open (Created/Deposited) sale per batch via `_openSaleOf[batchId]`, plus view `openSaleOf` | Without it one buyer depositing on two sales of the same batch lets the seller be paid twice; costs one SSTORE per sale, refunded on close
+- 2026-11-03 | B06 (fix): so a listing can't block a batch forever, a Created sale can be cancelled (via `refund`) by its seller, or by anyone once the seller is no longer custodian | Needed by the lock above; part of B09
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)

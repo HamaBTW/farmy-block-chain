@@ -83,11 +83,20 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
       await escrow.createSale(BATCH, frm(110), { from: seller });
     });
 
-    it("numbers sales from 1", async () => {
+    it("numbers sales from 1 and tracks the open sale per batch", async () => {
+      await registry.setBatch(2, frm(100), false, seller);
+      assert.equal((await escrow.openSaleOf(BATCH)).toString(), "0");
       await escrow.createSale(BATCH, frm(100), { from: seller });
-      await escrow.createSale(BATCH, frm(101), { from: seller });
+      await escrow.createSale(2, frm(101), { from: seller });
       assert.equal((await escrow.getSale(2)).price, frm(101));
       assert.equal((await escrow.getSale(3)).state, State.None);
+      assert.equal((await escrow.openSaleOf(BATCH)).toString(), "1");
+      assert.equal((await escrow.openSaleOf(2)).toString(), "2");
+    });
+
+    it("reverts when the batch already has an open sale", async () => {
+      await escrow.createSale(BATCH, frm(100), { from: seller });
+      await expectRevert(escrow.createSale(BATCH, frm(110), { from: seller }), "BatchAlreadyListed(uint256)");
     });
 
     it("reverts when the caller is not the custodian", async () => {
