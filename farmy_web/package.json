@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/"
+    "test": "node --test \"src/lib/*.test.ts\""
   },
   "dependencies": {
     "ethers": "6.17.0",
