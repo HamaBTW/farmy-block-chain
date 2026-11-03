@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B16 (integration tests with the real registry, in shared `test/integration/lifecycle.test.js`; done by A's agent)
-- **Next task:** B12–B15 market UI
+- **Last completed:** B12 (`/market`: FRM balance, max markup, authority panel to mint FRM and set markup; done by A's agent)
+- **Next task:** B13: sales list + create-sale form with cap pre-check
 - **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -34,7 +34,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B11 | `migrations/2_deploy_payment.js` (shared): `FarmCoin` → `PriceCapEscrow(registry, coin, 20)` → `registry.setEscrow(escrow)` | Depends on: B10, A11 | Done when: deployed on Ganache, `/` shows both contracts deployed
 
 ### Phase 4 — UI (`farmy_web/src/features/payment/`, route `/market`)
-- [ ] B12 | FRM balance + authority panel (mint FRM, set max markup) | Depends on: B11 | Done when: owner can mint/set markup from MetaMask, others see the revert; `npm run build` passes
+- [x] B12 | FRM balance + authority panel (mint FRM, set max markup) | Depends on: B11 | Done when: owner can mint/set markup from MetaMask, others see the revert; `npm run build` passes
 - [ ] B13 | Sales list (from `SaleCreated`/`Deposited`/... events) + create-sale form with cap pre-check | Depends on: B12 | Done when: listing works; over-cap shows the friendly message and the contract still reverts
 - [ ] B14 | Buyer flow: approve + deposit | Depends on: B13 | Done when: deposit from MetaMask moves FRM and the sale shows Deposited
 - [ ] B15 | Release + refund buttons | Depends on: B14 | Done when: both work from MetaMask; blocked cases show the contract revert
@@ -90,6 +90,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
+- 2026-11-03 | B12 (by A's agent): shared `farmy_web/src/lib/tx.ts` (`useContractTx`, `mined`, revert decoding across all 3 ABIs) and `lib/useChainVersion.ts` (refetch on every new block); A's `useRegistryTx` now wraps it | One tx/revert helper for both features; block-based refresh fixes a stale list right after a tx and shows other accounts' actions live
 - 2026-11-03 | B16 (by A's agent): B's scenarios (overpriced sale, refund after cancel, plus exact-cap edge and buyer refund blocked after delivery) are in the shared `test/integration/lifecycle.test.js` | One lifecycle file for both people's scenarios
 - 2026-11-03 | B11 (by A's agent): added shared `migrations/2_deploy_payment.js`; uses `BatchRegistry.deployed()`, deployer is regulator + market authority, markup 20 | As planned in B11; checked `registry.escrow() == escrow`, `escrow.registry()/coin()` correct
 - 2026-11-03 | B02: **IBatchRegistry v1 frozen** (A confirmed; no changes) | Both developers agreed

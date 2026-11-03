@@ -69,6 +69,7 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | Shared `farmy_web/src/lib/tx.ts` + `lib/useChainVersion.ts` added (B12); A's `useRegistryTx` keeps its API but wraps `useContractTx`; A's local `useReload` replaced by `useChainVersion` | Reuse for B's screens; fixes a stale batch list seen once right after a mint
 - 2026-11-03 | A16: one shared file `test/integration/lifecycle.test.js` covers A's and B's scenarios (B16 included) plus "price can't keep rising" (115 → cap 138) | B hadn't written B16; user asked A's agent to cover B's gaps
 - 2026-11-03 | A02: **IBatchRegistry v1 frozen** (file unchanged since 85a6147); B01 review: OK, no changes | Both developers agreed
 - 2026-11-03 | User decision: Person A's agent also does B's unfinished B11–B16 for the demo, and logs it in roadmap-B | B stopped at B10; demo needs deployment + market UI

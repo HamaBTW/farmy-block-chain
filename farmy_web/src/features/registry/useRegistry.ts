@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Contract } from "ethers";
 import { getContract } from "@/lib/contracts";
 import { loadBatches, loadBatch, loadHistory, type Batch, type HistoryItem } from "./registry";
@@ -9,13 +9,6 @@ import { loadBatches, loadBatch, loadHistory, type Batch, type HistoryItem } fro
 export function useRegistry(): Contract | null {
   const [registry] = useState(() => getContract("BatchRegistry"));
   return registry;
-}
-
-/** Bump `version` to refetch after a transaction. */
-export function useReload() {
-  const [version, setVersion] = useState(0);
-  const reload = useCallback(() => setVersion((v) => v + 1), []);
-  return { version, reload };
 }
 
 export function useBatches(registry: Contract | null, version: number) {

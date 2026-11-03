@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { BatchActions } from "./BatchActions";
 import { BatchDetail } from "./BatchDetail";
 import { BatchList } from "./BatchList";
 import { MintBatchForm } from "./MintBatchForm";
 import { RegulatorPanel } from "./RegulatorPanel";
-import { useBatchDetail, useBatches, useRegistry, useReload, useRoles } from "./useRegistry";
+import { useBatchDetail, useBatches, useRegistry, useRoles } from "./useRegistry";
 
 /** Person A: BatchRegistry screens (batches, custody, checkpoints, validation). */
 export function RegistryHome() {
   const registry = useRegistry();
   const { account, isOnGanache } = useWallet();
-  const { version, reload } = useReload();
+  const { version, reload } = useChainVersion();
   const [selectedId, setSelectedId] = useState<bigint | null>(null);
   const { batches, error, loaded } = useBatches(registry, version);
   const detail = useBatchDetail(registry, selectedId, version);
