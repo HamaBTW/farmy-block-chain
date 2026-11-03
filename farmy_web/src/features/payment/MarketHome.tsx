@@ -4,6 +4,7 @@ import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { AuthorityPanel } from "./AuthorityPanel";
 import { CreateSaleForm } from "./CreateSaleForm";
+import { SaleActions } from "./SaleActions";
 import { SalesList } from "./SalesList";
 import { formatFrm, useMarketContracts, useMarketInfo, useSales } from "./useMarket";
 
@@ -46,7 +47,18 @@ export function MarketHome() {
         <div className="space-y-4">
           <section className="card space-y-3">
             <h2 className="font-semibold">Sales</h2>
-            {!loaded ? <p className="text-sm opacity-60">Loading…</p> : <SalesList sales={sales} />}
+            {!loaded ? (
+              <p className="text-sm opacity-60">Loading…</p>
+            ) : (
+              <SalesList
+                sales={sales}
+                renderActions={
+                  canWrite && info
+                    ? (sale) => <SaleActions key={`${sale.id}-${account}`} sale={sale} account={account} balance={info.balance} onDone={reload} />
+                    : undefined
+                }
+              />
+            )}
             {error && <p className="text-sm text-red-500">{error}</p>}
           </section>
           {!canWrite && (
