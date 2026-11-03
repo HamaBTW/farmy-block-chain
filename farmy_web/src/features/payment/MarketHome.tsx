@@ -66,7 +66,7 @@ export function MarketHome() {
       </Card>
 
       <Drawer open={tools} title="Market authority tools" onClose={() => setTools(false)}>
-        {tools && info && <AuthorityPanel markup={info.markup} onDone={reload} />}
+        {tools && info && <AuthorityPanel markup={info.markup} version={version} onDone={reload} />}
       </Drawer>
     </div>
   );

@@ -12,6 +12,7 @@ import { usePeople } from "@/lib/people/PeopleProvider";
 import { mined } from "@/lib/tx";
 import { useChainVersion } from "@/lib/useChainVersion";
 import { priceCap } from "./sales";
+import { useBalance } from "./useMarket";
 
 /** Person B: the market steps of one batch that the acting person can do. The escrow enforces every rule. */
 export function SalePanel({ batch, steps, me, onDone }: SaleContext) {
@@ -108,16 +109,17 @@ function ListForSale({ batchId, lastPrice, onDone }: { batchId: bigint; lastPric
 }
 
 function BuyButton({ saleId, price, me, onDone }: { saleId: bigint; price: bigint; me: string; onDone: () => void }) {
-  const balance = useBalance(me);
+  const { version } = useChainVersion();
+  const balance = useBalance(me, version);
+  const tooPoor = balance !== null && balance < price;
   return (
     <div className="space-y-1">
-      {balance !== null && balance < price && (
-        <p className="text-sm text-harvest-ink">You have {formatFrm(balance)}. Ask the market authority to mint more FRM first.</p>
-      )}
+      {tooPoor && <p className="text-sm text-harvest-ink">You have {formatFrm(balance)}. Ask the market authority to mint more FRM first.</p>}
       <TxButton
         label={`Buy for ${formatFrm(price)}`}
         done="Paid into escrow"
         variant="primary"
+        disabled={tooPoor}
         send={async (signed) => {
           const escrow = signed("PriceCapEscrow");
           const coin = signed("FarmCoin");
@@ -145,19 +147,4 @@ function useMarkup(): number | null {
     };
   }, [version]);
   return markup;
-}
-
-function useBalance(account: string): bigint | null {
-  const { version } = useChainVersion();
-  const [balance, setBalance] = useState<bigint | null>(null);
-  useEffect(() => {
-    const coin = getContract("FarmCoin");
-    if (!coin) return;
-    let live = true;
-    coin.balanceOf(account).then((b: bigint) => live && setBalance(b)).catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [account, version]);
-  return balance;
 }
