@@ -30,15 +30,15 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A01 | ✅ | `IBatchRegistry.sol` draft |
 | A02 | ⏳ | Interface review by Person B |
 | A03–A09 | ✅ | `BatchRegistry` contract: mint, custody, checkpoints, validation, sale price |
-| A09b | ⏳ | Re-check against frozen interface (after A02) |
+| A09b | ⛔ | Re-check against frozen interface (blocked: waits on A02) |
 | A10 | ✅ | Coverage + gas report (41 tests, `npm run test:gas`) |
 | A11 | ✅ | Registry migration (`npm run migrate`) |
 | A12 | ✅ | UI: batch list + detail with event history (`/registry`) |
 | A13 | ✅ | UI: mint form (MetaMask-signed, shows decoded revert reasons) |
 | A14 | ✅ | UI: custody transfer, add checkpoint, validate (with role hints) |
-| A15 | ⬜ | UI: regulator panel |
-| A16 | ⬜ | Integration tests (needs B's escrow) |
-| A17 | ⬜ | End-to-end demo (needs B's escrow) |
+| A15 | ✅ | UI: regulator panel (grant/revoke inspector, set escrow) |
+| A16 | ⛔ | Integration tests (blocked: needs B's escrow) |
+| A17 | ⛔ | End-to-end demo (blocked: needs B's escrow + market UI) |
 
 ✅ done · ⏳ waiting on someone · ⬜ todo · ⛔ blocked
 

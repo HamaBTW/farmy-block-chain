@@ -6,6 +6,7 @@ import { BatchActions } from "./BatchActions";
 import { BatchDetail } from "./BatchDetail";
 import { BatchList } from "./BatchList";
 import { MintBatchForm } from "./MintBatchForm";
+import { RegulatorPanel } from "./RegulatorPanel";
 import { useBatchDetail, useBatches, useRegistry, useReload, useRoles } from "./useRegistry";
 
 /** Person A: BatchRegistry screens (batches, custody, checkpoints, validation). */
@@ -57,6 +58,11 @@ export function RegistryHome() {
               <p className="text-sm opacity-60">Connect MetaMask on the Farmy network to mint batches.</p>
             )}
           </section>
+          {canWrite && (
+            <section className="card">
+              <RegulatorPanel registry={registry} isOwner={roles.isOwner} version={version} onDone={reload} />
+            </section>
+          )}
         </div>
         <section className="card">
           {detail.batch && detail.batch.id === selectedId ? (
