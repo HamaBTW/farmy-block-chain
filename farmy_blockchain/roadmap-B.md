@@ -90,6 +90,7 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B09: one `refund` function covers cancel (Created, no FRM moved, `amount` 0) and refund (Deposited); both end in `Refunded` | Keeps idea1's function list and the architecture's state machine; no extra `cancelSale`
 - 2026-11-03 | B09: known limit: if custody reaches the buyer before validation, the buyer can still refund | Sellers must transfer custody only after validation (idea1 §7 order); documented for the demo
 - 2026-11-03 | B10: gas measured with a throwaway receipt script, no gas-reporter dependency added | Rules forbid adding dependencies without need; numbers in the table above
+- 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)
