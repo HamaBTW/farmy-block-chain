@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B05 (`PriceCapEscrow` skeleton; 5 tests passing)
-- **Next task:** B06: `createSale` with the price cap
+- **Last completed:** B06 (`createSale` with cap, `getSale`; 13 escrow tests passing)
+- **Next task:** B07: `deposit`
 - **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** A02/B02 freeze waits on A confirming the review below
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -24,7 +24,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] B03 | `FarmCoin`: OZ `ERC20("FarmCoin","FRM")` + `Ownable`, `mint(to, amount)` onlyOwner (market authority) | Depends on: - | Done when: name/symbol/decimals, owner mint, non-owner revert, zero-address revert tested
 - [x] B04 | `MockBatchRegistry` in `contracts/mocks/` implementing `IBatchRegistry` with test setters | Depends on: A01 | Done when: compiles; setters + 4 interface functions work in a small test
 - [x] B05 | `PriceCapEscrow` skeleton: constructor(registry, coin, maxMarkupPercent) with zero-address checks, `Ownable` (owner = market authority), `setMaxMarkup` + `MarkupChanged`, view `maxMarkupPercent()` | Depends on: B03, B04 | Done when: deploy, setMaxMarkup happy/non-owner/event tested
-- [ ] B06 | `createSale(batchId, price)`: seller must be `custodianOf`, `price > 0`, `price <= lastPrice * (100 + markup) / 100` + `SaleCreated` | Depends on: B04 | Done when: within-cap OK, cap edge (exactly cap) OK, over-cap revert (150 vs cap 120), non-custodian and zero-price reverts, event tested
+- [x] B06 | `createSale(batchId, price)`: seller must be `custodianOf`, `price > 0`, `price <= lastPrice * (100 + markup) / 100` + `SaleCreated` | Depends on: B04 | Done when: within-cap OK, cap edge (exactly cap) OK, over-cap revert (150 vs cap 120), non-custodian and zero-price reverts, event tested
 - [ ] B07 | `deposit(saleId)`: buyer pulls `price` FRM via `SafeERC20.safeTransferFrom`, state `Created → Deposited` + `Deposited` | Depends on: B06 | Done when: balances moved, wrong state, no allowance, seller-as-buyer, unknown-sale reverts, event tested
 - [ ] B08 | `releasePayment(saleId)`: requires `isValidated` and `custodianOf == buyer`; state → `Released`, pays seller, `registry.recordSalePrice`; `nonReentrant`, CEI + `PaymentReleased` | Depends on: B07 | Done when: happy path, not-validated, custody-not-moved, double-release reverts, recorded price, event tested
 - [ ] B09 | `refund(saleId)` (rule in Decisions Log, approved): state → `Refunded`, FRM back to buyer; `nonReentrant` + `Refunded` | Depends on: B07 | Done when: seller cancel, buyer refund while conditions unmet, buyer blocked once conditions met, double-refund and refund-after-release reverts, event tested
@@ -63,6 +63,9 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - 2026-11-03 | Escrow default max markup 20% in the migration | idea1 §7 example (100 → cap 120)
 - 2026-11-03 | B05: markup stored as `uint16` (max 65535%), `MarkupChanged(uint16 percent)` also emitted by the constructor | Packs with the sale counter in one slot; event history shows the initial markup too
 - 2026-11-03 | B05: `registry()` and `coin()` views on the escrow | UI needs the coin address for `approve`; immutables are cheap to read
+- 2026-11-03 | B06: added view `getSale(saleId)` returning the `Sale` struct | UI needs the live state/buyer to show release and refund buttons; events alone don't give current state cheaply
+- 2026-11-03 | B06: cap rounds down (`lastPrice * (100 + markup) / 100`) and `price == cap` is allowed | idea1 formula uses `<=`
+- 2026-11-03 | B06: several open sales per batch are allowed; only the custodian can list, and release needs custody with that sale's buyer, so at most one can be released | Extra 'active sale' mapping would cost one more SSTORE per sale for no safety gain
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)

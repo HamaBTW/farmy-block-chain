@@ -3,19 +3,45 @@ pragma solidity 0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
 
 /// @title PriceCapEscrow
 /// @notice Holds buyer FRM until delivery and caps the markup over the last declared price.
 /// @dev The contract owner is the market authority. Reads the registry only through IBatchRegistry.
 contract PriceCapEscrow is Ownable {
+    using SafeCast for uint256;
+
+    enum SaleState {
+        None,
+        Created,
+        Deposited,
+        Released,
+        Refunded
+    }
+
+    /// @dev Two storage slots: (seller, state, batchId) and (buyer, price).
+    struct Sale {
+        address seller;
+        SaleState state;
+        uint64 batchId;
+        address buyer;
+        uint96 price;
+    }
+
     IBatchRegistry private immutable _registry;
     IERC20 private immutable _coin;
     uint16 private _maxMarkupPercent;
+    uint64 private _lastSaleId;
+    mapping(uint256 => Sale) private _sales;
 
     event MarkupChanged(uint16 percent);
+    event SaleCreated(uint256 indexed saleId, uint256 indexed batchId, address indexed seller, uint256 price);
 
     error ZeroAddress();
+    error ZeroPrice();
+    error NotCustodian();
+    error PriceAboveCap(uint256 price, uint256 cap);
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -32,6 +58,27 @@ contract PriceCapEscrow is Ownable {
     /// @param percent Max markup in percent (20 = +20%).
     function setMaxMarkup(uint16 percent) external onlyOwner {
         _setMaxMarkup(percent);
+    }
+
+    /// @notice Lists a batch for sale. Only the current custodian can list it.
+    /// @param batchId The batch NFT id.
+    /// @param price Sale price in FRM base units, at most lastPrice * (100 + markup) / 100.
+    /// @return saleId Id of the new sale (starts at 1).
+    function createSale(uint256 batchId, uint256 price) external returns (uint256 saleId) {
+        if (price == 0) revert ZeroPrice();
+        if (_registry.custodianOf(batchId) != msg.sender) revert NotCustodian();
+        uint256 cap = (_registry.getLastPrice(batchId) * (100 + uint256(_maxMarkupPercent))) / 100;
+        if (price > cap) revert PriceAboveCap(price, cap);
+
+        saleId = ++_lastSaleId;
+        _sales[saleId] = Sale(msg.sender, SaleState.Created, batchId.toUint64(), address(0), price.toUint96());
+        emit SaleCreated(saleId, batchId, msg.sender, price);
+    }
+
+    /// @notice Full state of a sale (state None for an unknown id).
+    /// @param saleId The sale id.
+    function getSale(uint256 saleId) external view returns (Sale memory) {
+        return _sales[saleId];
     }
 
     /// @notice Current max markup in percent.
