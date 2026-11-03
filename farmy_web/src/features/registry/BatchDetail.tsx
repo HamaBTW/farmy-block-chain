@@ -1,6 +1,6 @@
 "use client";
 
-import { ValidatedBadge } from "./BatchList";
+
 import { formatFrm, type Batch, type HistoryItem } from "./registry";
 
 export function BatchDetail({ batch, history }: { batch: Batch; history: HistoryItem[] }) {
@@ -8,7 +8,7 @@ export function BatchDetail({ batch, history }: { batch: Batch; history: History
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <h2 className="text-lg font-semibold">Batch #{batch.id.toString()}</h2>
-        <ValidatedBadge validated={batch.validated} />
+        {batch.validated ? "✅" : ""}
       </div>
       <dl className="grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
         <dt className="opacity-60">Custodian</dt>

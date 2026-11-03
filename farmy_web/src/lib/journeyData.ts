@@ -1,6 +1,9 @@
 import type { Contract, EventLog } from "ethers";
 import type { JourneyState, OpenSale } from "./journey";
 
+/** A batch as screens show it: its journey state plus the metadata URI. */
+export type BatchView = JourneyState & { uri: string };
+
 const OPEN_STATES: Record<number, OpenSale["state"]> = { 1: "Created", 2: "Deposited" };
 
 /** Live state of one batch and its open sale (escrow may be null if not deployed yet). */
@@ -26,7 +29,12 @@ export async function loadBatchIds(registry: Contract): Promise<bigint[]> {
   return logs.map((log) => (log as EventLog).args.batchId as bigint).reverse();
 }
 
-export async function loadAllJourneyStates(registry: Contract, escrow: Contract | null): Promise<JourneyState[]> {
+export async function loadBatchView(registry: Contract, escrow: Contract | null, batchId: bigint): Promise<BatchView> {
+  const [state, uri] = await Promise.all([loadJourneyState(registry, escrow, batchId), registry.tokenURI(batchId) as Promise<string>]);
+  return { ...state, uri };
+}
+
+export async function loadAllBatchViews(registry: Contract, escrow: Contract | null): Promise<BatchView[]> {
   const ids = await loadBatchIds(registry);
-  return Promise.all(ids.map((id) => loadJourneyState(registry, escrow, id)));
+  return Promise.all(ids.map((id) => loadBatchView(registry, escrow, id)));
 }

@@ -1,86 +1,69 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Drawer } from "@/components/ui/Drawer";
+import { getContract } from "@/lib/contracts";
+import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
+import { useBatchViews } from "@/lib/useBatchViews";
 import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { BatchActions } from "./BatchActions";
-import { BatchDetail } from "./BatchDetail";
-import { BatchList } from "./BatchList";
-import { MintBatchForm } from "./MintBatchForm";
+import { AddBatchForm } from "./AddBatchForm";
+import { BatchGrid } from "./BatchGrid";
 import { RegulatorPanel } from "./RegulatorPanel";
-import { useBatchDetail, useBatches, useRegistry, useRoles } from "./useRegistry";
 
-/** Person A: BatchRegistry screens (batches, custody, checkpoints, validation). */
+/** Person A: every batch as a tag, adding batches, and the regulator's tools. */
 export function RegistryHome() {
-  const registry = useRegistry();
   const { account, isOnGanache } = useWallet();
+  const { chainRoles } = usePeople();
   const { version, reload } = useChainVersion();
-  const [selectedId, setSelectedId] = useState<bigint | null>(null);
-  const { batches, error, loaded } = useBatches(registry, version);
-  const detail = useBatchDetail(registry, selectedId, version);
-  const roles = useRoles(registry, account, version);
-
-  const onMinted = useCallback(
-    (batchId: bigint) => {
-      setSelectedId(batchId);
-      reload();
-    },
-    [reload],
-  );
+  const { batches, loaded, error } = useBatchViews(version);
+  const [adding, setAdding] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  const registry = getContract("BatchRegistry");
+  const canWrite = !!account && isOnGanache;
+  const isRegulator = hasChainRole(chainRoles, "regulator", account);
 
   if (!registry) {
     return (
-      <div className="card">
-        <h1 className="text-xl font-bold mb-2">Batches</h1>
-        <p className="text-sm opacity-70">BatchRegistry is not deployed yet. Run `npm run migrate` in farmy_blockchain.</p>
-      </div>
+      <Card>
+        <h1 className="font-display text-3xl font-bold">Batches</h1>
+        <p className="mt-2 text-ink-soft">The batch registry isn&apos;t deployed yet. Run `npm run migrate` in farmy_blockchain, then reload.</p>
+      </Card>
     );
   }
 
-  const canWrite = !!account && isOnGanache;
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-bold mr-2">Batches</h1>
-        {roles.isOwner && <span className="pill">regulator</span>}
-        {roles.isInspector && <span className="pill">inspector</span>}
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-4">
-          <section className="card">
-            {!loaded ? <p className="text-sm opacity-60">Loading…</p> : <BatchList batches={batches} selectedId={selectedId} onSelect={setSelectedId} />}
-            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
-          </section>
-          <section className="card">
-            {canWrite ? (
-              <MintBatchForm key={account} account={account} onMinted={onMinted} />
-            ) : (
-              <p className="text-sm opacity-60">Connect MetaMask on the Farmy network to mint batches.</p>
-            )}
-          </section>
-          {canWrite && (
-            <section className="card">
-              <RegulatorPanel registry={registry} isOwner={roles.isOwner} version={version} onDone={reload} />
-            </section>
-          )}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-prose">
+          <h1 className="font-display text-3xl font-bold">Batches</h1>
+          <p className="mt-1 text-ink-soft">Every crate, lot or animal on its way from the farm. Open one to see its journey and what happens next.</p>
         </div>
-        <section className="card">
-          {detail.batch && detail.batch.id === selectedId ? (
-            <>
-              <BatchDetail batch={detail.batch} history={detail.history} />
-              {canWrite && (
-                <div className="mt-4">
-                  <BatchActions key={`${detail.batch.id}-${account}`} batch={detail.batch} account={account} isInspector={roles.isInspector} onDone={reload} />
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-sm opacity-60">{selectedId === null ? "Select a batch to see its history." : "Loading…"}</p>
-          )}
-          {detail.error && <p className="mt-2 text-sm text-red-500">{detail.error}</p>}
-        </section>
+        <div className="flex gap-2">
+          {isRegulator && <Button onClick={() => setAdmin(true)}>Regulator tools</Button>}
+          <Button variant="primary" disabled={!canWrite} onClick={() => setAdding(true)}>
+            Add batch
+          </Button>
+        </div>
       </div>
+
+      {error && <p className="text-sm text-beet">{error}</p>}
+      {loaded && batches.length === 0 && (
+        <Card className="text-center">
+          <p className="font-display text-xl font-bold">No batches yet</p>
+          <p className="mt-1 text-ink-soft">Add the first one as 🚜 Farmer.</p>
+        </Card>
+      )}
+      <BatchGrid batches={batches} />
+
+      <Drawer open={adding} title="Add a batch" onClose={() => setAdding(false)}>
+        {adding && account && <AddBatchForm account={account} />}
+      </Drawer>
+      <Drawer open={admin} title="Regulator tools" onClose={() => setAdmin(false)}>
+        {admin && <RegulatorPanel registry={registry} isOwner={isRegulator} version={version} onDone={reload} />}
+      </Drawer>
     </div>
   );
 }

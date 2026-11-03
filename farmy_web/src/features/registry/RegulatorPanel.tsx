@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isAddress, type Contract } from "ethers";
-import { Field } from "./MintBatchForm";
+import { Field } from "@/components/ui/Field";
 import { useRegistryTx } from "./useRegistryTx";
 
 type Props = {

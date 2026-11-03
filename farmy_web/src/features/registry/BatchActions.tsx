@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { id as keccakText } from "ethers";
-import { Field } from "./MintBatchForm";
+import { Field } from "@/components/ui/Field";
 import type { Batch } from "./registry";
 import { useRegistryTx } from "./useRegistryTx";
 
