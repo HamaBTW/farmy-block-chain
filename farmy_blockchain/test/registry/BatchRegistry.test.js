@@ -3,8 +3,10 @@ const { expectRevert, ZERO_ADDRESS } = require("./helpers");
 
 const ERC721_ID = "0x80ac58cd";
 const ERC721_METADATA_ID = "0x5b5e139f";
+const URI = "ipfs://batch-1-tomatoes";
+const PRICE = web3.utils.toWei("100"); // 100 FRM (18 decimals)
 
-contract("BatchRegistry", ([regulator, other, inspector, escrow]) => {
+contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer]) => {
   let registry;
 
   beforeEach(async () => {
@@ -65,6 +67,42 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow]) => {
 
     it("reverts for the zero address", async () => {
       await expectRevert(registry.setEscrow(ZERO_ADDRESS, { from: regulator }), "ZeroAddress()");
+    });
+  });
+
+  describe("mintBatch", () => {
+    it("mints to the farmer with URI and initial price", async () => {
+      const tx = await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      assert.equal(await registry.ownerOf(1), farmer);
+      assert.equal(await registry.tokenURI(1), URI);
+      assert.equal((await registry.balanceOf(farmer)).toString(), "1");
+
+      const minted = tx.logs.find((l) => l.event === "BatchMinted");
+      assert.equal(minted.args.batchId.toString(), "1");
+      assert.equal(minted.args.farmer, farmer);
+      const price = tx.logs.find((l) => l.event === "PriceRecorded");
+      assert.equal(price.args.batchId.toString(), "1");
+      assert.equal(price.args.price.toString(), PRICE);
+    });
+
+    it("gives each batch the next id", async () => {
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      const tx = await registry.mintBatch(other, "ipfs://batch-2", PRICE, { from: other });
+      assert.equal(tx.logs.find((l) => l.event === "BatchMinted").args.batchId.toString(), "2");
+      assert.equal(await registry.ownerOf(2), other);
+    });
+
+    it("reverts for a zero price", async () => {
+      await expectRevert(registry.mintBatch(farmer, URI, 0, { from: farmer }), "ZeroPrice()");
+    });
+
+    it("reverts for the zero address", async () => {
+      await expectRevert(registry.mintBatch(ZERO_ADDRESS, URI, PRICE, { from: farmer }), "ERC721InvalidReceiver(address)");
+    });
+
+    it("reverts for a price above uint128", async () => {
+      const tooBig = web3.utils.toBN(2).pow(web3.utils.toBN(128)).toString();
+      await expectRevert(registry.mintBatch(farmer, URI, tooBig, { from: farmer }), "SafeCastOverflowedUintDowncast(uint8,uint256)");
     });
   });
 });
