@@ -208,7 +208,9 @@ Leave the console with `.exit`.
 | S8 | Stranger can't call `recordSalePrice` | ☐ |
 | S9 | Events recorded | ☐ |
 
-## 5. Not testable yet
-- Deploy with `npm run migrate` and the "deployed ✅" status on `/` → B11, waits on A11.
-- MetaMask flows on `/market` (mint, list, approve + deposit, release, refund) → B12–B15.
-- Against A's real `BatchRegistry` → B16 integration tests.
+## 5. In the web app
+Everything above can now also be done by clicking, without the console:
+- `npm run migrate` here, then `npm run dev` in `farmy_web/` and open http://localhost:3000.
+- The app starts in **Demo mode** (no MetaMask): pick a person in the top-right menu.
+- Follow **Guide → The story** (`/guide#story`): it covers S3–S7 (cap rejection at 150, sale at 115, release, refunds) through the batch pages.
+- Contract errors appear as plain sentences under the buttons; **Guide → What errors mean** lists them all.

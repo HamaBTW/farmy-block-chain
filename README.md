@@ -13,6 +13,7 @@ All assets are **simulated**. There are no real goods or payments.
 | [DEMO.md](DEMO.md) | **5–7 min teacher demo script** + simple explanation + likely questions |
 | [manual-test-A.md](manual-test-A.md) | Person A manual test checklist (contract + UI with MetaMask) |
 | [farmy_blockchain/roadmap-B.md](farmy_blockchain/roadmap-B.md) | Person B tasks (FarmCoin + PriceCapEscrow) |
+| [farmy_web/DESIGN_SYSTEM.md](farmy_web/DESIGN_SYSTEM.md) | UI look and rules: colors, type, components, words |
 
 ## Quick start
 
@@ -23,6 +24,8 @@ cd farmy_blockchain && npm install && npm test   # contract tests on Ganache
 npm run migrate                                  # deploy + sync ABIs into farmy_web
 cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 ```
+
+No MetaMask needed for a demo: the app starts in **Demo mode** (act as any Ganache person from the top-right menu). The in-app **Guide** (`/guide`) walks through the whole story.
 
 ## Progress — Person A (BatchRegistry)
 
@@ -54,6 +57,7 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | B11 | ✅ | Payment migration (FarmCoin, escrow at 20%, `setEscrow`) * |
 | B12–B15 | ✅ | UI `/market`: balance, authority panel, sales, cap pre-check, buy, release, refund * |
 | B16–B17 | ✅ | Integration tests + end-to-end demo * |
+| UI01–UI11 | ✅ | Whole-app redesign: demo people, Demo mode, batch journey, generated metadata, guide ([spec](docs/superpowers/specs/2026-11-03-farmy-ui-redesign-design.md)) |
 
 \* done by Person A's agent at the user's request; see the Decisions Log in [roadmap-B.md](farmy_blockchain/roadmap-B.md). Person B's manual tests: [test_person.md](farmy_blockchain/test_person.md).
 

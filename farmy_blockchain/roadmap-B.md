@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B17 (e2e demo through the UI with A's screens; done by A's agent). **All B tasks done**
-- **Next task:** none. Person B: please review B11–B17 (done by A's agent, see Decisions Log)
+- **Last completed:** UI11 (whole-app UI redesign, verified end to end in Demo mode)
+- **Next task:** none. Tell Person A about the redesign (A-owned + shared files below, Demo-mode rule exception); `DEMO.md` still describes the old screens
 - **Branch:** `person-b`, main merged in at 3667ef9 (all A and B tasks); the sync-folder fix (4312a98) is only here until `person-b` is merged to main
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -42,6 +42,19 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 ### Phase 5 — Integration (after A is done)
 - [x] B16 | Integration tests in `test/integration/` (B's part): overpriced sale rejected, refund after cancelled sale | Depends on: B11, A10 | Done when: pass against the real `BatchRegistry` on Ganache (A writes happy path, blocked releases, unauthorized calls)
 - [x] B17 | End-to-end demo through the UI (with A's registry screens) | Depends on: B16, A17 | Done when: idea1 §7 lifecycle runs fully from MetaMask
+
+### Phase 6 — UI redesign (whole app, user request; spec `docs/superpowers/specs/2026-11-03-farmy-ui-redesign-design.md`, plan `docs/superpowers/plans/2026-11-03-farmy-ui-redesign.md`)
+- [x] UI01 | Design tokens, fonts, UI primitives, `npm test` (node --test) | Depends on: B17 | Done when: lint + build pass
+- [x] UI02 | Named demo people, PersonPicker, People page | Depends on: UI01 | Done when: 3 people tests pass, page lists Ganache accounts
+- [x] UI03 | Demo mode + header person switcher | Depends on: UI02 | Done when: a Demo-mode transaction is mined without MetaMask
+- [x] UI04 | Plain-language errors + TxButton | Depends on: UI01 | Done when: 5 error tests pass
+- [x] UI05 | Metadata + checkpoint hash generators | Depends on: UI01 | Done when: 6 metadata tests pass
+- [x] UI06 | Next-step logic | Depends on: UI01 | Done when: 10 journey tests pass
+- [x] UI07 | Batch grid + Add batch form | Depends on: UI02–UI05 | Done when: batch added from the form shows as a tag
+- [x] UI08 | Batch journey page (stamps + Next step) | Depends on: UI06, UI07 | Done when: page shows tag, stamps, right step per person
+- [x] UI09 | Market list + admin drawers | Depends on: UI08 | Done when: inspector toggle, mint, markup work from the UI
+- [x] UI10 | Home, guide, next-step banner, setup card | Depends on: UI09 | Done when: lint + build pass, banner points to the next step
+- [x] UI11 | End-to-end check + docs | Depends on: UI10 | Done when: idea1 §7 runs in Demo mode (150 refused, 115 sold, released, new cap 138, cancel works), 99 contract + 24 UI tests pass
 
 ## B01 — Review of `IBatchRegistry.sol` (v1 draft, commit 85a6147)
 **Verdict: OK, no changes requested.** Ready to freeze once A confirms.
@@ -100,6 +113,12 @@ Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy p
 - 2026-11-03 | B02: **IBatchRegistry v1 frozen** (A confirmed; no changes) | Both developers agreed
 - 2026-11-03 | Added `test_person.md`: B's manual test guide (Truffle console + mock registry, scenarios S1–S9); every expected output checked by script on Ganache (54/54) | User request; B11+ not testable by hand yet
 - 2026-11-03 | Shared file `farmy_web/scripts/sync-contracts.mjs`: `mkdirSync(src/contracts, recursive)` before writing | `npm run migrate` crashed with ENOENT on a fresh clone because `src/contracts/` only holds the git-ignored file. Tell A.
+- 2026-11-03 | UI redesign approved by the user: whole app, named demo people, hash metadata (`farmy:keccak256:0x…`, JSON kept in the browser), journey page, guide, farm-market look | User decisions in chat; details in the spec
+- 2026-11-03 | **Rule exception (rules.md §2a "MetaMask is the only signer"):** Demo mode signs with Ganache's unlocked accounts through the RPC, only when the chain id is 1337; no keys in the browser; MetaMask still available | User approved; makes the demo usable without importing 6 keys. **Tell Person A**
+- 2026-11-03 | Shared files changed by B (tell Person A): `farmy_web/src/app/*` (layout, home, new `batch/[id]`, `guide`, `people`), `src/app/globals.css`, `src/components/*` (new `ui/`, `Header`, `NextStepBanner`, `SetupCard`; removed `WalletButton`, `ConnectionStatus`), `src/lib/*` (new `people`, `metadata`, `docStore`, `errors`, `format`, `journey`, `journeyData`, `useBatchViews`; `wallet/WalletProvider` Demo mode; `tx.ts` friendly errors), `src/features/guide`, `src/features/people`, `tsconfig.json` (`allowImportingTsExtensions`), `package.json` (`test` script), new `DESIGN_SYSTEM.md`, `docs/superpowers/` | Redesign
+- 2026-11-03 | **A-owned files changed by B (user approved "whole app"; tell Person A):** `farmy_web/src/features/registry/` rewritten: `RegistryHome`, `RegulatorPanel` (inspector toggles, escrow link); new `BatchGrid`, `AddBatchForm`, `BatchJourney`, `CheckpointForm`; removed `BatchList`, `BatchDetail`, `BatchActions`, `MintBatchForm`, `useRegistryTx`; `registry.ts`/`useRegistry.ts` trimmed to the history loader | Redesign
+- 2026-11-03 | Next-step rule: the UI offers "List for sale" only after validation and "Hand goods to buyer" only after validation | Avoids the known refund gap (buyer refunds after early delivery); contracts unchanged
+- 2026-11-03 | BigInt literals avoided (`BigInt(…)`) in UI code | `tsconfig` targets ES2017; same idiom as existing code
 
 ## Needs From The Other Person
 - **B delivered to A:** B01 review above (verdict OK). Tell A so they can freeze (A02)
