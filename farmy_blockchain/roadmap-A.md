@@ -7,7 +7,7 @@ Shared files touched by A are logged in the Decisions Log.
 - **Date:** 2026-11-03
 - **Last completed:** A00 (project init: Truffle toolchain pinned, folder layout, Next.js app `farmy_web/`, architecture.md)
 - **Next task:** A01: draft `contracts/interfaces/IBatchRegistry.sol` and get Person B's review
-- **Branch:** init is on `main` (uncommitted); A's work goes on `person-a`
+- **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** none
 
 ## Tasks
