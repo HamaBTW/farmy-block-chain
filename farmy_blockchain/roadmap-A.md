@@ -5,10 +5,10 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A15 (UI regulator panel: grant/revoke inspector, set escrow; lint + build pass). All of A's solo tasks are done
-- **Next task:** none can start: A09b waits on A02 (B's review); A16/A17 wait on B's FarmCoin + PriceCapEscrow
+- **Last completed:** A17 (+B17): idea1 §7 lifecycle run fully through the UI (6 accounts, UI only). **All A tasks done**
+- **Next task:** none. Demo script: `DEMO.md` at the repo root
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
+- **Open problems:** none
 
 ## Tasks
 
@@ -17,7 +17,7 @@ Shared files touched by A are logged in the Decisions Log.
 
 ### Phase 1 — Shared interface (first, with B)
 - [x] A01 | Draft `IBatchRegistry.sol`: `getLastPrice`, `isValidated`, `custodianOf`, `recordSalePrice` + NatSpec, prices `uint256` in FRM base units | Depends on: - | Done when: compiles with no warnings and is committed for B to review
-- [ ] A02 | Interface agreed with B (apply review, freeze) | Depends on: A01 | Done when: B confirms in writing and both roadmaps log "IBatchRegistry v1 frozen"
+- [x] A02 | Interface agreed with B (apply review, freeze) | Depends on: A01 | Done when: B confirms in writing and both roadmaps log "IBatchRegistry v1 frozen"
 
 ### Phase 2 — BatchRegistry contract (each task = code + tests in `test/registry/`)
 - [x] A03 | Skeleton: `BatchRegistry is ERC721URIStorage, Ownable`, storage layout (packed `Batch` struct), constructor | Depends on: A01 | Done when: compiles, deploy test passes, `name()`/`symbol()`/`owner()` tested
@@ -27,7 +27,7 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A07 | `addCheckpoint(batchId, dataHash)` (inspector only, event-only storage) | Depends on: A04 | Done when: event args tested; non-inspector and unknown-batch reverts tested
 - [x] A08 | `validateBatch(batchId)` + `isValidated` + `BatchValidated` | Depends on: A05 | Done when: inspector validates; non-inspector, unknown batch and double-validation reverts tested
 - [x] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against draft v1 of the interface
-- [!] A09b | Re-check `BatchRegistry` against the frozen interface (apply any B change) | Depends on: A02 | Done when: compiles with no warnings against frozen `IBatchRegistry.sol`, `npm test` green | Blocked: B hasn't reviewed the interface (no `person-b` branch on origin, 2026-11-03)
+- [x] A09b | Re-check `BatchRegistry` against the frozen interface (apply any B change) | Depends on: A02 | Done when: compiles with no warnings against frozen `IBatchRegistry.sol`, `npm test` green
 - [x] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
@@ -40,8 +40,8 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A15 | Regulator panel: set inspector, set escrow | Depends on: A12 | Done when: owner can set both from the UI; other accounts are refused
 
 ### Phase 5 — Integration (after B is done)
-- [!] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios) | Blocked: B's contracts not delivered yet; rules forbid integration tests before both contracts are done
-- [!] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask | Blocked: needs A16 and B's market screens
+- [x] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios)
+- [x] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask
 
 ## Gas Report (A10, solc 0.8.24, optimizer 200 runs, Ganache)
 
@@ -69,6 +69,11 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A17: e2e run on a fresh deploy through the UI only: grant inspector → mint FRM → mint batch @100 → farmer validate rejected → custody to transporter → checkpoint + validate → custody to warehouse → list 150 rejected (cap 120) → list 115 → retailer deposits → release blocked (custody) → custody to retailer → released → warehouse has 115 FRM, last price 115 | Tested with the Playwright wallet stand-in; MetaMask clicks are in DEMO.md
+- 2026-11-03 | Shared `farmy_web/src/lib/tx.ts` + `lib/useChainVersion.ts` added (B12); A's `useRegistryTx` keeps its API but wraps `useContractTx`; A's local `useReload` replaced by `useChainVersion` | Reuse for B's screens; fixes a stale batch list seen once right after a mint
+- 2026-11-03 | A16: one shared file `test/integration/lifecycle.test.js` covers A's and B's scenarios (B16 included) plus "price can't keep rising" (115 → cap 138) | B hadn't written B16; user asked A's agent to cover B's gaps
+- 2026-11-03 | A02: **IBatchRegistry v1 frozen** (file unchanged since 85a6147); B01 review: OK, no changes | Both developers agreed
+- 2026-11-03 | User decision: Person A's agent also does B's unfinished B11–B16 for the demo, and logs it in roadmap-B | B stopped at B10; demo needs deployment + market UI
 - 2026-11-03 | A15: the regulator panel checks one address at a time with `isInspector` instead of listing all inspectors | `setInspector` has no events (A04), and there's no on-chain list
 - 2026-11-03 | A14: action forms show to every connected account with a role hint instead of being hidden, so the contract's revert (`NotInspector`, `ERC721IncorrectOwner`) is visible | Demo §8: unauthorized addresses are rejected on-chain, not only in the UI
 - 2026-11-03 | A14: the checkpoint form builds a JSON record (weight, temp, location, time), shows it to keep off-chain, and sends only `keccak256(record)` | Rules: big data off-chain, `bytes32` on-chain
