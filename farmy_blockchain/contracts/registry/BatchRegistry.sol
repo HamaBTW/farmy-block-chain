@@ -21,6 +21,34 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     address private _escrow;
     uint256 private _lastBatchId;
 
+    error ZeroAddress();
+
     /// @notice Deploys the registry with the deployer as regulator.
     constructor() ERC721("Farmy Batch", "FBATCH") Ownable(msg.sender) {}
+
+    /// @notice Grants or revokes the inspector role.
+    /// @param account Inspector address.
+    /// @param allowed True to grant, false to revoke.
+    function setInspector(address account, bool allowed) external onlyOwner {
+        if (account == address(0)) revert ZeroAddress();
+        _inspectors[account] = allowed;
+    }
+
+    /// @notice Sets the only address allowed to call `recordSalePrice` (the PriceCapEscrow).
+    /// @param escrowAddress Deployed escrow contract.
+    function setEscrow(address escrowAddress) external onlyOwner {
+        if (escrowAddress == address(0)) revert ZeroAddress();
+        _escrow = escrowAddress;
+    }
+
+    /// @notice Whether `account` is an inspector.
+    /// @param account Address to check.
+    function isInspector(address account) external view returns (bool) {
+        return _inspectors[account];
+    }
+
+    /// @notice Address allowed to record sale prices.
+    function escrow() external view returns (address) {
+        return _escrow;
+    }
 }
