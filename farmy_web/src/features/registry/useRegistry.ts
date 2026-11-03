@@ -59,3 +59,23 @@ export function useBatchDetail(registry: Contract | null, id: bigint | null, ver
 
   return state;
 }
+
+/** Roles of the connected account: regulator (contract owner) and inspector. */
+export function useRoles(registry: Contract | null, account: string | null, version: number) {
+  const [roles, setRoles] = useState({ isOwner: false, isInspector: false, owner: "" });
+
+  useEffect(() => {
+    if (!registry || !account) return;
+    let live = true;
+    Promise.all([registry.owner(), registry.isInspector(account)])
+      .then(([owner, isInspector]: [string, boolean]) =>
+        live && setRoles({ owner, isInspector, isOwner: owner.toLowerCase() === account.toLowerCase() }),
+      )
+      .catch(() => live && setRoles({ isOwner: false, isInspector: false, owner: "" }));
+    return () => {
+      live = false;
+    };
+  }, [registry, account, version]);
+
+  return account ? roles : { isOwner: false, isInspector: false, owner: roles.owner };
+}

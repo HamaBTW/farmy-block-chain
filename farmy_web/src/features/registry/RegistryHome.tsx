@@ -2,10 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { BatchActions } from "./BatchActions";
 import { BatchDetail } from "./BatchDetail";
 import { BatchList } from "./BatchList";
 import { MintBatchForm } from "./MintBatchForm";
-import { useBatchDetail, useBatches, useRegistry, useReload } from "./useRegistry";
+import { useBatchDetail, useBatches, useRegistry, useReload, useRoles } from "./useRegistry";
 
 /** Person A: BatchRegistry screens (batches, custody, checkpoints, validation). */
 export function RegistryHome() {
@@ -15,6 +16,7 @@ export function RegistryHome() {
   const [selectedId, setSelectedId] = useState<bigint | null>(null);
   const { batches, error, loaded } = useBatches(registry, version);
   const detail = useBatchDetail(registry, selectedId, version);
+  const roles = useRoles(registry, account, version);
 
   const onMinted = useCallback(
     (batchId: bigint) => {
@@ -37,7 +39,11 @@ export function RegistryHome() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Batches</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-xl font-bold mr-2">Batches</h1>
+        {roles.isOwner && <span className="pill">regulator</span>}
+        {roles.isInspector && <span className="pill">inspector</span>}
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-4">
           <section className="card">
@@ -54,7 +60,14 @@ export function RegistryHome() {
         </div>
         <section className="card">
           {detail.batch && detail.batch.id === selectedId ? (
-            <BatchDetail batch={detail.batch} history={detail.history} />
+            <>
+              <BatchDetail batch={detail.batch} history={detail.history} />
+              {canWrite && (
+                <div className="mt-4">
+                  <BatchActions key={`${detail.batch.id}-${account}`} batch={detail.batch} account={account} isInspector={roles.isInspector} onDone={reload} />
+                </div>
+              )}
+            </>
           ) : (
             <p className="text-sm opacity-60">{selectedId === null ? "Select a batch to see its history." : "Loading…"}</p>
           )}

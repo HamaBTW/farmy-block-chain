@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A13 (UI mint form; decoded revert messages; lint + build pass)
-- **Next task:** A14: UI custody transfer + inspector actions. A09b runs whenever B finishes the A02 review
+- **Last completed:** A14 (UI custody transfer, add checkpoint, validate; role badges; lint + build pass)
+- **Next task:** A15: UI regulator panel (set inspector, set escrow). A09b runs whenever B finishes the A02 review
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
 
@@ -36,7 +36,7 @@ Shared files touched by A are logged in the Decisions Log.
 ### Phase 4 — UI (`farmy_web/src/features/registry/`)
 - [x] A12 | Batch list + detail (reads `custodianOf`, `isValidated`, `getLastPrice`, `tokenURI`; history from events) | Depends on: A11 | Done when: works on Ganache, `npm run build` passes
 - [x] A13 | Mint batch form (MetaMask-signed) | Depends on: A12 | Done when: mint from MetaMask shows up in the list
-- [ ] A14 | Custody transfer + inspector actions (add checkpoint, validate) | Depends on: A12 | Done when: each action works from MetaMask; unauthorized accounts see the contract revert message
+- [x] A14 | Custody transfer + inspector actions (add checkpoint, validate) | Depends on: A12 | Done when: each action works from MetaMask; unauthorized accounts see the contract revert message
 - [ ] A15 | Regulator panel: set inspector, set escrow | Depends on: A12 | Done when: owner can set both from the UI; other accounts are refused
 
 ### Phase 5 — Integration (after B is done)
@@ -69,6 +69,8 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A14: action forms show to every connected account with a role hint instead of being hidden, so the contract's revert (`NotInspector`, `ERC721IncorrectOwner`) is visible | Demo §8: unauthorized addresses are rejected on-chain, not only in the UI
+- 2026-11-03 | A14: the checkpoint form builds a JSON record (weight, temp, location, time), shows it to keep off-chain, and sends only `keccak256(record)` | Rules: big data off-chain, `bytes32` on-chain
 - 2026-11-03 | A13: added `.input` style to shared `farmy_web/src/app/globals.css` | Reusable form style for both feature folders
 - 2026-11-03 | A13: `useRegistryTx` decodes custom errors by searching the wallet error for revert bytes (MetaMask nests them in `data.data`, Ganache in `data.result`) | ethers alone showed "missing revert data"
 - 2026-11-03 | A13: UI writes tested with Playwright and a test-only `window.ethereum` stand-in that forwards to Ganache's unlocked accounts; not in app code | Can't drive the real MetaMask extension from automation

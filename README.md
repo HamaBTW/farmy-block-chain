@@ -35,7 +35,7 @@ cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 | A11 | ✅ | Registry migration (`npm run migrate`) |
 | A12 | ✅ | UI: batch list + detail with event history (`/registry`) |
 | A13 | ✅ | UI: mint form (MetaMask-signed, shows decoded revert reasons) |
-| A14 | ⬜ | UI: custody + inspector actions |
+| A14 | ✅ | UI: custody transfer, add checkpoint, validate (with role hints) |
 | A15 | ⬜ | UI: regulator panel |
 | A16 | ⬜ | Integration tests (needs B's escrow) |
 | A17 | ⬜ | End-to-end demo (needs B's escrow) |
