@@ -110,5 +110,7 @@ export function useWallet(): WalletState {
 const noopSubscribe = () => () => {};
 
 function errorMessage(e: unknown): string {
+  // -32002: MetaMask already has a request waiting for the user.
+  if ((e as { code?: number }).code === -32002) return "MetaMask already has a request waiting. Open the MetaMask extension and answer it.";
   return (e as { shortMessage?: string; message?: string }).shortMessage ?? (e as Error).message ?? String(e);
 }
