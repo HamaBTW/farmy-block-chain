@@ -219,4 +219,64 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transpo
       await expectRevert(registry.isValidated(99), "ERC721NonexistentToken(uint256)");
     });
   });
+
+  describe("recordSalePrice / getLastPrice", () => {
+    const SALE = web3.utils.toWei("115");
+
+    beforeEach(async () => {
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      await registry.setEscrow(escrow, { from: regulator });
+    });
+
+    it("returns the initial price after mint", async () => {
+      assert.equal((await registry.getLastPrice(1)).toString(), PRICE);
+    });
+
+    it("lets the escrow record a new last price and emits PriceRecorded", async () => {
+      const tx = await registry.recordSalePrice(1, SALE, { from: escrow });
+      assert.equal((await registry.getLastPrice(1)).toString(), SALE);
+      const ev = tx.logs.find((l) => l.event === "PriceRecorded");
+      assert.equal(ev.args.batchId.toString(), "1");
+      assert.equal(ev.args.price.toString(), SALE);
+    });
+
+    it("does not touch the validation flag", async () => {
+      await registry.setInspector(inspector, true, { from: regulator });
+      await registry.validateBatch(1, { from: inspector });
+      await registry.recordSalePrice(1, SALE, { from: escrow });
+      assert.isTrue(await registry.isValidated(1));
+    });
+
+    it("reverts for any caller other than the escrow", async () => {
+      for (const from of [regulator, farmer, inspector, other]) {
+        await expectRevert(registry.recordSalePrice(1, SALE, { from }), "NotEscrow()");
+      }
+    });
+
+    it("reverts for everyone while no escrow is set", async () => {
+      const fresh = await BatchRegistry.new({ from: regulator });
+      await fresh.mintBatch(farmer, URI, PRICE, { from: farmer });
+      await expectRevert(fresh.recordSalePrice(1, SALE, { from: regulator }), "NotEscrow()");
+    });
+
+    it("reverts for a zero price", async () => {
+      await expectRevert(registry.recordSalePrice(1, 0, { from: escrow }), "ZeroPrice()");
+    });
+
+    it("reverts for an unknown batch", async () => {
+      await expectRevert(registry.recordSalePrice(99, SALE, { from: escrow }), "ERC721NonexistentToken(uint256)");
+      await expectRevert(registry.getLastPrice(99), "ERC721NonexistentToken(uint256)");
+    });
+  });
+
+  describe("IBatchRegistry", () => {
+    it("serves the escrow's reads through the interface ABI", async () => {
+      const IBatchRegistry = artifacts.require("IBatchRegistry");
+      await registry.mintBatch(farmer, URI, PRICE, { from: farmer });
+      const asInterface = await IBatchRegistry.at(registry.address);
+      assert.equal((await asInterface.getLastPrice(1)).toString(), PRICE);
+      assert.isFalse(await asInterface.isValidated(1));
+      assert.equal(await asInterface.custodianOf(1), farmer);
+    });
+  });
 });

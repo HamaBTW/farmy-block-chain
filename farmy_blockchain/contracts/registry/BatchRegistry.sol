@@ -5,12 +5,13 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
 
 /// @title BatchRegistry
 /// @notice One NFT per physical batch of agricultural goods (simulated assets).
 ///         Tracks custody, validation and the last declared price. Holds no money.
 /// @dev The NFT owner is the custodian. The contract owner is the regulator.
-contract BatchRegistry is ERC721URIStorage, Ownable {
+contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     /// @dev Packed into one storage slot (16 + 1 bytes).
     struct Batch {
         uint128 lastPrice;
@@ -32,6 +33,7 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     error ZeroPrice();
     error NotInspector();
     error AlreadyValidated();
+    error NotEscrow();
 
     modifier onlyInspector() {
         if (!_inspectors[msg.sender]) revert NotInspector();
@@ -88,6 +90,18 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
         emit BatchValidated(batchId, msg.sender);
     }
 
+    /// @notice Records a completed sale price as the new last price.
+    /// @dev Only the escrow set by the regulator may call this.
+    /// @param batchId The batch NFT id.
+    /// @param price Sale price in FarmCoin base units.
+    function recordSalePrice(uint256 batchId, uint256 price) external {
+        if (msg.sender != _escrow) revert NotEscrow();
+        if (price == 0) revert ZeroPrice();
+        _requireOwned(batchId);
+        _batches[batchId].lastPrice = SafeCast.toUint128(price);
+        emit PriceRecorded(batchId, price);
+    }
+
     /// @notice Grants or revokes the inspector role.
     /// @param account Inspector address.
     /// @param allowed True to grant, false to revoke.
@@ -107,6 +121,13 @@ contract BatchRegistry is ERC721URIStorage, Ownable {
     /// @param account Address to check.
     function isInspector(address account) external view returns (bool) {
         return _inspectors[account];
+    }
+
+    /// @notice Last declared price (initial price, then each released sale).
+    /// @param batchId The batch NFT id.
+    function getLastPrice(uint256 batchId) external view returns (uint256) {
+        _requireOwned(batchId);
+        return _batches[batchId].lastPrice;
     }
 
     /// @notice Whether an inspector has validated the batch.

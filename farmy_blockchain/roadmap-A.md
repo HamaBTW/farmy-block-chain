@@ -5,10 +5,10 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A08 (`validateBatch` + `isValidated` + `BatchValidated`; 32 tests passing)
-- **Next task:** A09: `recordSalePrice` + `getLastPrice` + `is IBatchRegistry`
+- **Last completed:** A09 (`recordSalePrice` + `getLastPrice`; `BatchRegistry is IBatchRegistry` against draft v1; 40 tests passing). All 4 interface functions and 5 events from idea1 are in
+- **Next task:** A10: coverage + gas pass. A09b runs whenever B finishes the A02 review
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** waiting on B's review of `IBatchRegistry.sol` (A02)
+- **Open problems:** B hasn't reviewed `IBatchRegistry.sol` yet (A02); no `person-b` branch on origin as of 2026-11-03
 
 ## Tasks
 
@@ -26,7 +26,8 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A06 | `transferCustody(batchId, newCustodian)` + `custodianOf` + `CustodyTransferred` | Depends on: A05 | Done when: only current custodian can transfer; revert paths and event tested
 - [x] A07 | `addCheckpoint(batchId, dataHash)` (inspector only, event-only storage) | Depends on: A04 | Done when: event args tested; non-inspector and unknown-batch reverts tested
 - [x] A08 | `validateBatch(batchId)` + `isValidated` + `BatchValidated` | Depends on: A05 | Done when: inspector validates; non-inspector, unknown batch and double-validation reverts tested
-- [ ] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A02, A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against the frozen interface
+- [x] A09 | `recordSalePrice(batchId, price)` (onlyEscrow) + `getLastPrice` + `PriceRecorded`; contract now declares `is IBatchRegistry` | Depends on: A04, A05, A06, A08 | Done when: test account set as escrow can record; any other caller reverts; event tested; compiles against draft v1 of the interface
+- [ ] A09b | Re-check `BatchRegistry` against the frozen interface (apply any B change) | Depends on: A02 | Done when: compiles with no warnings against frozen `IBatchRegistry.sol`, `npm test` green
 - [ ] A10 | Coverage + gas pass: every external function has happy/revert/access/event tests; gas report reviewed | Depends on: A03–A09 | Done when: `npm test` green, gas table pasted in this roadmap, nothing flagged
 
 ### Phase 3 — Deploy
@@ -53,6 +54,8 @@ Shared files touched by A are logged in the Decisions Log.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A09: split off A09b (re-check against frozen interface) | A02 review not done yet; rule 11 (split instead of claiming frozen)
+- 2026-11-03 | A09: `recordSalePrice` checks `NotEscrow` first, then `ZeroPrice`, then batch exists; while no escrow is set nobody can call it | Cheapest revert first; `_escrow == 0` never matches `msg.sender`
 - 2026-11-03 | A08: validation is one-way (no un-validate) and survives custody transfers | idea1 has no revoke; escrow reads it at release time
 - 2026-11-03 | A07: checkpoints are event-only `CheckpointAdded(batchId, inspector, dataHash)`; timestamp comes from the block; no zero-hash check | Gas rule: history read off-chain only; no extra checks beyond idea1
 - 2026-11-03 | A06: `CustodyTransferred` emitted from an `_update` override for every non-mint transfer, so plain `transferFrom`/approved operators are also logged | Custody history in events is always complete
