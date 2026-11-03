@@ -62,7 +62,7 @@ export function RegistryHome() {
         {adding && account && <AddBatchForm account={account} />}
       </Drawer>
       <Drawer open={admin} title="Regulator tools" onClose={() => setAdmin(false)}>
-        {admin && <RegulatorPanel registry={registry} isOwner={isRegulator} version={version} onDone={reload} />}
+        {admin && <RegulatorPanel version={version} onDone={reload} />}
       </Drawer>
     </div>
   );

@@ -1,83 +1,73 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { batchDocOf } from "@/components/ui/BatchChips";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Drawer } from "@/components/ui/Drawer";
+import { formatFrm } from "@/lib/format";
+import { useBatchViews } from "@/lib/useBatchViews";
 import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { AuthorityPanel } from "./AuthorityPanel";
-import { CreateSaleForm } from "./CreateSaleForm";
-import { SaleActions } from "./SaleActions";
 import { SalesList } from "./SalesList";
-import { formatFrm, useMarketContracts, useMarketInfo, useSales } from "./useMarket";
+import { useMarketContracts, useMarketInfo, useSales } from "./useMarket";
 
-/** Person B: FarmCoin + PriceCapEscrow screens (balances, sales, deposit, release, refund). */
+/** Person B: every sale, the acting person's FRM, and the market authority's tools. */
 export function MarketHome() {
   const market = useMarketContracts();
   const { account, isOnGanache } = useWallet();
   const { version, reload } = useChainVersion();
   const { info, isAuthority } = useMarketInfo(market, account, version);
   const { sales, error, loaded } = useSales(market, version);
+  const { batches } = useBatchViews(version);
+  const [tools, setTools] = useState(false);
+
+  const docs = useMemo(() => new Map(batches.map((b) => [b.batchId.toString(), batchDocOf(b.uri)])), [batches]);
+  const open = sales.filter((s) => s.state === "Created" || s.state === "Deposited");
+  const finished = sales.filter((s) => s.state === "Released" || s.state === "Refunded");
 
   if (!market) {
     return (
-      <div className="card">
-        <h1 className="text-xl font-bold mb-2">Market</h1>
-        <p className="text-sm opacity-70">FarmCoin / PriceCapEscrow are not deployed yet. Run `npm run migrate` in farmy_blockchain.</p>
-      </div>
+      <Card>
+        <h1 className="font-display text-3xl font-bold">Market</h1>
+        <p className="mt-2 text-ink-soft">FarmCoin and the escrow aren&apos;t deployed yet. Run `npm run migrate` in farmy_blockchain, then reload.</p>
+      </Card>
     );
   }
 
-  const canWrite = !!account && isOnGanache;
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-bold mr-2">Market</h1>
-        {isAuthority && <span className="pill">market authority</span>}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-prose">
+          <h1 className="font-display text-3xl font-bold">Market</h1>
+          <p className="mt-1 text-ink-soft">
+            Batches for sale. The buyer&apos;s FRM waits in escrow until the batch is validated and handed over. No sale can go above the last price
+            plus {info ? `${info.markup}%` : "the max markup"}.
+          </p>
+        </div>
+        {isAuthority && <Button onClick={() => setTools(true)}>Market authority tools</Button>}
       </div>
-      <section className="card flex flex-wrap gap-x-8 gap-y-2 text-sm">
-        <div>
-          <span className="opacity-60">Your balance </span>
-          <span className="font-mono font-semibold" data-testid="frm-balance">{info && account ? formatFrm(info.balance) : "—"}</span>
-        </div>
-        <div>
-          <span className="opacity-60">Max markup </span>
-          <span className="font-mono font-semibold">{info ? `${info.markup}%` : "…"}</span>
-        </div>
-      </section>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-4">
-          <section className="card space-y-3">
-            <h2 className="font-semibold">Sales</h2>
-            {!loaded ? (
-              <p className="text-sm opacity-60">Loading…</p>
-            ) : (
-              <SalesList
-                sales={sales}
-                renderActions={
-                  canWrite && info
-                    ? (sale) => <SaleActions key={`${sale.id}-${account}`} sale={sale} account={account} balance={info.balance} onDone={reload} />
-                    : undefined
-                }
-              />
-            )}
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </section>
-          {!canWrite && (
-            <section className="card">
-              <p className="text-sm opacity-60">Connect MetaMask on the Farmy network to trade.</p>
-            </section>
-          )}
-        </div>
-        {canWrite && info && (
-          <div className="space-y-4">
-            <section className="card">
-              <CreateSaleForm market={market} account={account} markup={info.markup} version={version} onDone={reload} />
-            </section>
-            <section className="card">
-              <AuthorityPanel key={account} account={account} isAuthority={isAuthority} markup={info.markup} onDone={reload} />
-            </section>
-          </div>
-        )}
-      </div>
+
+      {account && isOnGanache && info && (
+        <p className="text-sm">
+          <span className="text-ink-soft">Your balance</span> <b className="tabular">{formatFrm(info.balance)}</b>
+        </p>
+      )}
+
+      <Card>
+        <h2 className="mb-2 font-display text-xl font-bold">Open sales</h2>
+        {loaded ? <SalesList sales={open} docs={docs} empty="Nothing is for sale right now. A holder lists a validated batch from its page." /> : <p className="text-sm text-ink-soft">Loading…</p>}
+        {error && <p className="text-sm text-beet">{error}</p>}
+      </Card>
+      <Card>
+        <h2 className="mb-2 font-display text-xl font-bold">Finished</h2>
+        <SalesList sales={finished} docs={docs} empty="No finished sales yet." />
+      </Card>
+
+      <Drawer open={tools} title="Market authority tools" onClose={() => setTools(false)}>
+        {tools && info && <AuthorityPanel markup={info.markup} onDone={reload} />}
+      </Drawer>
     </div>
   );
 }

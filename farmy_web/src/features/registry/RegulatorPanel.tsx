@@ -1,93 +1,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isAddress, type Contract } from "ethers";
-import { Field } from "@/components/ui/Field";
-import { useRegistryTx } from "./useRegistryTx";
+import { Chip } from "@/components/ui/Chip";
+import { PersonName } from "@/components/ui/PersonName";
+import { TxButton } from "@/components/ui/TxButton";
+import { getContract, getDeployment } from "@/lib/contracts";
+import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
+import { mined } from "@/lib/tx";
 
-type Props = {
-  registry: Contract;
-  isOwner: boolean;
-  version: number;
-  onDone: () => void;
-};
+/** Regulator (contract owner) tools: who may inspect, and which escrow may record sale prices. */
+export function RegulatorPanel({ version, onDone }: { version: number; onDone: () => void }) {
+  const { people, chainRoles } = usePeople();
 
-/** Regulator (contract owner) tools: manage inspectors and the authorized escrow. */
-export function RegulatorPanel({ registry, isOwner, version, onDone }: Props) {
   return (
-    <div className="space-y-5">
-      <h2 className="font-semibold">🏛️ Regulator</h2>
-      {!isOwner && <p className="text-xs text-amber-600">You are not the regulator: the contract will reject these actions.</p>}
-      <InspectorForm registry={registry} version={version} onDone={onDone} />
-      <EscrowForm registry={registry} version={version} onDone={onDone} />
+    <div className="space-y-8">
+      <section className="space-y-3">
+        <h3 className="font-display text-lg font-bold">🔍 Inspectors</h3>
+        <p className="text-sm text-ink-soft">Inspectors add checkpoints and validate batches. Turn the role on or off per person.</p>
+        <ul className="divide-y divide-line rounded-xl border border-line">
+          {people.map((p) => {
+            const on = hasChainRole(chainRoles, "inspector", p.address);
+            return (
+              <li key={p.address} className="flex flex-wrap items-center justify-between gap-2 p-3">
+                <span className="flex items-center gap-2">
+                  <PersonName address={p.address} showAddress={false} />
+                  {on && <Chip tone="field">Inspector</Chip>}
+                </span>
+                <TxButton
+                  label={on ? "Remove inspector" : "Make inspector"}
+                  done={on ? `${p.name} is no longer an inspector` : `${p.name} is now an inspector`}
+                  variant={on ? "danger" : "secondary"}
+                  send={(signed) => mined(signed("BatchRegistry").setInspector(p.address, !on))}
+                  onDone={onDone}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <EscrowLink version={version} onDone={onDone} />
     </div>
   );
 }
 
-function InspectorForm({ registry, version, onDone }: Omit<Props, "isOwner">) {
-  const [account, setAccount] = useState("");
-  const [status, setStatus] = useState<boolean | null>(null);
-  const { send, pending, error } = useRegistryTx(onDone);
-  const valid = isAddress(account);
-
-  useEffect(() => {
-    if (!valid) return;
-    let live = true;
-    registry.isInspector(account).then((v: boolean) => live && setStatus(v)).catch(() => live && setStatus(null));
-    return () => {
-      live = false;
-    };
-  }, [registry, account, valid, version]);
-
-  return (
-    <div className="space-y-2">
-      <Field label="Inspector address">
-        <input className="input font-mono" value={account} onChange={(e) => setAccount(e.target.value)} placeholder="0x…" />
-      </Field>
-      {valid && status !== null && <p className="text-xs opacity-70">Currently: {status ? "inspector ✓" : "not an inspector"}</p>}
-      <div className="flex gap-2">
-        <button className="btn" disabled={pending || !valid} onClick={() => send((r) => r.setInspector(account, true))}>
-          Grant
-        </button>
-        <button className="btn btn-warn" disabled={pending || !valid} onClick={() => send((r) => r.setInspector(account, false))}>
-          Revoke
-        </button>
-      </div>
-      {error && <p className="text-sm text-red-500 break-all">{error}</p>}
-    </div>
-  );
-}
-
-function EscrowForm({ registry, version, onDone }: Omit<Props, "isOwner">) {
+function EscrowLink({ version, onDone }: { version: number; onDone: () => void }) {
   const [current, setCurrent] = useState<string | null>(null);
-  const [next, setNext] = useState("");
-  const { send, pending, error } = useRegistryTx(onDone);
+  const deployed = getDeployment("PriceCapEscrow")?.address ?? null;
 
   useEffect(() => {
+    const registry = getContract("BatchRegistry");
+    if (!registry) return;
     let live = true;
-    registry.escrow().then((a: string) => live && setCurrent(a)).catch(() => live && setCurrent(null));
+    registry.escrow().then((a: string) => live && setCurrent(a)).catch(() => {});
     return () => {
       live = false;
     };
-  }, [registry, version]);
+  }, [version]);
 
+  const linked = !!current && !!deployed && current.toLowerCase() === deployed.toLowerCase();
   return (
-    <form
-      className="space-y-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        send((r) => r.setEscrow(next));
-      }}
-    >
-      <p className="text-sm">
-        <span className="opacity-60">Escrow (only caller of recordSalePrice): </span>
-        <span className="font-mono break-all">{current ?? "…"}</span>
-      </p>
-      <Field label="New escrow address (PriceCapEscrow)">
-        <input className="input font-mono" value={next} onChange={(e) => setNext(e.target.value)} placeholder="0x…" required />
-      </Field>
-      <button className="btn" disabled={pending}>{pending ? "Confirm in MetaMask…" : "Set escrow"}</button>
-      {error && <p className="text-sm text-red-500 break-all">{error}</p>}
-    </form>
+    <section className="space-y-3">
+      <h3 className="font-display text-lg font-bold">💱 Market link</h3>
+      <p className="text-sm text-ink-soft">Only the linked escrow may record a sale as the batch&apos;s new last price.</p>
+      {linked ? (
+        <Chip tone="field">Linked to the deployed escrow</Chip>
+      ) : deployed ? (
+        <TxButton label="Link the deployed escrow" done="Escrow linked" variant="primary" send={(signed) => mined(signed("BatchRegistry").setEscrow(deployed))} onDone={onDone} />
+      ) : (
+        <p className="text-sm text-harvest-ink">The escrow isn&apos;t deployed yet. Run `npm run migrate` in farmy_blockchain.</p>
+      )}
+      {current && !linked && <p className="font-mono text-xs text-ink-soft">Currently: {current}</p>}
+    </section>
   );
 }

@@ -1,40 +1,59 @@
 "use client";
 
-import { shortAddress } from "@/lib/chain";
+import Link from "next/link";
+import { Chip, type Tone } from "@/components/ui/Chip";
+import { PersonName } from "@/components/ui/PersonName";
+import { formatFrm } from "@/lib/format";
+import { productEmoji, type BatchDoc } from "@/lib/metadata";
 import type { Sale } from "./sales";
-import { formatFrm } from "./useMarket";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
-const STATE_STYLE: Record<Sale["state"], string> = {
-  None: "opacity-60",
-  Created: "border-sky-600 text-sky-700 dark:text-sky-400",
-  Deposited: "border-amber-600 text-amber-700 dark:text-amber-400",
-  Released: "border-green-600 text-green-700 dark:text-green-400",
-  Refunded: "opacity-60",
+const STATE: Record<Sale["state"], { label: string; tone: Tone }> = {
+  None: { label: "Unknown", tone: "plain" },
+  Created: { label: "🏷️ For sale", tone: "harvest" },
+  Deposited: { label: "🔒 Paid into escrow", tone: "harvest" },
+  Released: { label: "💸 Payment released", tone: "field" },
+  Refunded: { label: "↩️ Refunded", tone: "beet" },
 };
 
-type Props = { sales: Sale[]; renderActions?: (sale: Sale) => React.ReactNode };
+type Props = { sales: Sale[]; docs: Map<string, BatchDoc | null>; empty: string };
 
-export function SalesList({ sales, renderActions }: Props) {
-  if (sales.length === 0) return <p className="text-sm opacity-60">No sales yet.</p>;
+/** Sales as rows; the action for each happens on its batch page. */
+export function SalesList({ sales, docs, empty }: Props) {
+  if (sales.length === 0) return <p className="text-sm text-ink-soft">{empty}</p>;
   return (
-    <div className="space-y-3">
-      {sales.map((sale) => (
-        <div key={sale.id.toString()} className="rounded-lg border border-black/10 dark:border-white/15 p-3 text-sm space-y-1" data-testid={`sale-${sale.id}`}>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">Sale #{sale.id.toString()}</span>
-            <span className="opacity-60">batch #{sale.batchId.toString()}</span>
-            <span className={`pill ${STATE_STYLE[sale.state]}`}>{sale.state}</span>
-            <span className="ml-auto font-mono font-semibold">{formatFrm(sale.price)}</span>
-          </div>
-          <div className="font-mono text-xs opacity-70">
-            seller {shortAddress(sale.seller)}
-            {sale.buyer !== ZERO && <> · buyer {shortAddress(sale.buyer)}</>}
-          </div>
-          {renderActions?.(sale)}
-        </div>
-      ))}
-    </div>
+    <ul className="divide-y divide-line">
+      {sales.map((sale) => {
+        const doc = docs.get(sale.batchId.toString()) ?? null;
+        const state = STATE[sale.state];
+        return (
+          <li key={sale.id.toString()} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+            <span className="text-2xl" aria-hidden>
+              {doc ? productEmoji(doc.product) : "📦"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {doc ? `${doc.product}, ${doc.quantity} ${doc.unit}` : `Batch #${sale.batchId}`}
+                <span className="ml-2 text-sm font-normal text-ink-soft">sale #{sale.id.toString()}</span>
+              </p>
+              <p className="text-sm text-ink-soft">
+                Seller <PersonName address={sale.seller} showAddress={false} />
+                {sale.buyer !== ZERO && (
+                  <>
+                    {" "}· buyer <PersonName address={sale.buyer} showAddress={false} />
+                  </>
+                )}
+              </p>
+            </div>
+            <Chip tone={state.tone}>{state.label}</Chip>
+            <span className="w-24 text-right font-display text-xl font-bold tabular">{formatFrm(sale.price)}</span>
+            <Link href={`/batch/${sale.batchId}`} className="rounded-xl border border-line px-3 py-2 text-sm font-semibold hover:bg-field-wash">
+              Open batch
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatUnits, type Contract } from "ethers";
+import type { Contract } from "ethers";
 import { getContract } from "@/lib/contracts";
 import { loadSales, type Sale } from "./sales";
 
@@ -57,8 +57,4 @@ export function useSales(market: MarketContracts | null, version: number) {
   }, [market, version]);
 
   return state;
-}
-
-export function formatFrm(value: bigint): string {
-  return `${formatUnits(value, 18)} FRM`;
 }

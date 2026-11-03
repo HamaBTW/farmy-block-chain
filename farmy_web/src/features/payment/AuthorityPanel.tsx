@@ -2,71 +2,69 @@
 
 import { useState } from "react";
 import { parseUnits } from "ethers";
-import { mined, useContractTx } from "@/lib/tx";
+import { AmountInput, parseFrm } from "@/components/ui/AmountInput";
+import { Choices, Field } from "@/components/ui/Field";
+import { PersonPicker } from "@/components/ui/PersonPicker";
+import { TxButton } from "@/components/ui/TxButton";
+import { personLabel } from "@/lib/people";
+import { usePeople } from "@/lib/people/PeopleProvider";
+import { mined } from "@/lib/tx";
 
-type Props = { account: string; isAuthority: boolean; markup: number; onDone: () => void };
+const AMOUNTS = ["100", "500", "1000"].map((v) => ({ label: v, value: parseUnits(v, 18) }));
+const MARKUPS = ["10", "20", "30"];
 
 /** Market authority tools: mint demo FRM and set the max markup. The contracts enforce the role. */
-export function AuthorityPanel({ account, isAuthority, markup, onDone }: Props) {
+export function AuthorityPanel({ markup, onDone }: { markup: number; onDone: () => void }) {
   return (
-    <div className="space-y-5">
-      <h2 className="font-semibold">🏦 Market authority</h2>
-      {!isAuthority && <p className="text-xs text-amber-600">You are not the market authority: the contracts will reject these actions.</p>}
-      <MintForm account={account} onDone={onDone} />
+    <div className="space-y-8">
+      <MintForm onDone={onDone} />
       <MarkupForm markup={markup} onDone={onDone} />
     </div>
   );
 }
 
-function MintForm({ account, onDone }: { account: string; onDone: () => void }) {
-  const [to, setTo] = useState(account);
-  const [amount, setAmount] = useState("1000");
-  const { run, pending, error } = useContractTx();
+function MintForm({ onDone }: { onDone: () => void }) {
+  const { people } = usePeople();
+  const [to, setTo] = useState(() => people.find((p) => p.role === "buyer")?.address ?? "");
+  const [amount, setAmount] = useState("500");
+  const wei = parseFrm(amount);
   return (
-    <form
-      className="space-y-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        run(async (signed) => {
-          await mined(signed("FarmCoin").mint(to, parseUnits(amount, 18)));
-          onDone();
-        });
-      }}
-    >
-      <label className="block text-sm">
-        <span className="block mb-1 opacity-70">Mint FRM to (simulated money)</span>
-        <input className="input font-mono" value={to} onChange={(e) => setTo(e.target.value)} required />
-      </label>
-      <label className="block text-sm">
-        <span className="block mb-1 opacity-70">Amount (FRM)</span>
-        <input className="input font-mono" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" required />
-      </label>
-      <button className="btn" disabled={pending}>{pending ? "Confirm in MetaMask…" : "Mint FRM"}</button>
-      {error && <p className="text-sm text-red-500 break-all">{error}</p>}
-    </form>
+    <section className="space-y-3">
+      <h3 className="font-display text-lg font-bold">🪙 Mint FRM</h3>
+      <p className="text-sm text-ink-soft">Simulated money for the demo. Buyers need FRM before they can pay into escrow.</p>
+      <PersonPicker label="Give FRM to" value={to} onChange={setTo} />
+      <AmountInput label="Amount" value={amount} onChange={setAmount} quick={AMOUNTS} />
+      <TxButton
+        label="Mint FRM"
+        done={`FRM minted for ${to ? personLabel(people, to) : "them"}`}
+        variant="primary"
+        disabled={!to || !wei}
+        send={(signed) => mined(signed("FarmCoin").mint(to, wei!))}
+        onDone={onDone}
+      />
+    </section>
   );
 }
 
 function MarkupForm({ markup, onDone }: { markup: number; onDone: () => void }) {
   const [percent, setPercent] = useState(String(markup));
-  const { run, pending, error } = useContractTx();
+  const valid = /^\d{1,5}$/.test(percent) && Number(percent) <= 65535;
   return (
-    <form
-      className="space-y-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        run(async (signed) => {
-          await mined(signed("PriceCapEscrow").setMaxMarkup(Number(percent)));
-          onDone();
-        });
-      }}
-    >
-      <label className="block text-sm">
-        <span className="block mb-1 opacity-70">Max markup (%), currently {markup}%</span>
-        <input className="input font-mono" value={percent} onChange={(e) => setPercent(e.target.value)} inputMode="numeric" required />
-      </label>
-      <button className="btn" disabled={pending}>{pending ? "Confirm in MetaMask…" : "Set max markup"}</button>
-      {error && <p className="text-sm text-red-500 break-all">{error}</p>}
-    </form>
+    <section className="space-y-3">
+      <h3 className="font-display text-lg font-bold">📏 Max markup</h3>
+      <p className="text-sm text-ink-soft">A sale may cost at most the last price plus this percent. It is {markup}% now.</p>
+      <Choices options={MARKUPS} value={percent} onChange={setPercent} render={(v) => `${v}%`} />
+      <Field label="Or another percent">
+        <input className="input tabular" inputMode="numeric" value={percent} onChange={(e) => setPercent(e.target.value)} />
+      </Field>
+      <TxButton
+        label="Set max markup"
+        done="Max markup updated"
+        variant="primary"
+        disabled={!valid || Number(percent) === markup}
+        send={(signed) => mined(signed("PriceCapEscrow").setMaxMarkup(Number(percent)))}
+        onDone={onDone}
+      />
+    </section>
   );
 }
