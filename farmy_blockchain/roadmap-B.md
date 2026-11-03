@@ -7,7 +7,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - **Date:** 2026-11-03
 - **Last completed:** B10 (coverage + gas pass; 59 tests passing in the whole suite)
 - **Next task:** B11: shared migration (blocked until A11 deploys `BatchRegistry`)
-- **Branch:** `person-b` (local only, not pushed), branched from `main` at 14f6d40 (A01–A04 included)
+- **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** A02/B02 freeze waits on A confirming the B01 review; B11+ blocked on A11 (A has not finished A05–A11)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
 
