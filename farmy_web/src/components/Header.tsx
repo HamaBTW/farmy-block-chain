@@ -23,7 +23,7 @@ export function Header() {
   return (
     <header className="border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <Link href="/" className="font-display text-2xl font-extrabold text-field">
+        <Link href="/" className="whitespace-nowrap font-display text-2xl font-extrabold text-field">
           🌾 Farmy
         </Link>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
@@ -31,7 +31,7 @@ export function Header() {
             <NavLink key={n.href} {...n} active={isActive(n.href)} />
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           <Identity />
           <details className="relative md:hidden">
             <summary className="flex h-10 cursor-pointer list-none items-center rounded-xl border border-line px-3 text-sm font-semibold">Menu</summary>
@@ -75,8 +75,8 @@ function Identity() {
     return (
       <details ref={menu} className="relative">
         <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm">
-          <span className="text-ink-soft">Acting as</span>
-          <span className="font-semibold">{me ? `${me.emoji} ${me.name}` : "…"}</span>
+          <span className="hidden text-ink-soft sm:inline">Acting as</span>
+          <span className="whitespace-nowrap font-semibold">{me ? `${me.emoji} ${me.name}` : "…"}</span>
           <span aria-hidden>▾</span>
         </summary>
         <div className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-line bg-card p-2 shadow-lg">

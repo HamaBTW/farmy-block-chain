@@ -91,6 +91,7 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
   const mine = steps.filter((s) => canDo(s, account, isInspector));
   const registrySteps = mine.filter((s) => REGISTRY_ACTIONS.includes(s.action));
   const saleSteps = mine.filter((s) => !REGISTRY_ACTIONS.includes(s.action));
+  const saleFirst = saleSteps.some((s) => s.primary);
   const waitingFor = primary && !canDo(primary, account, isInspector) ? primary : null;
   const target = waitingFor ? personForWho(waitingFor.who, people, chainRoles) : undefined;
   const regulator = findPerson(people, chainRoles.regulator);
@@ -121,10 +122,12 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
               )}
             </div>
           )}
+          {/* The primary step comes first, whichever side (registry or market) owns it. */}
+          {saleFirst && salePanel({ batch, steps: saleSteps, me: account, onDone })}
           {registrySteps.map((s) => (
             <RegistryStep key={s.action} step={s} batch={batch} onDone={onDone} />
           ))}
-          {salePanel({ batch, steps: saleSteps, me: account, onDone })}
+          {!saleFirst && salePanel({ batch, steps: saleSteps, me: account, onDone })}
           {mine.length === 0 && !waitingFor && <p className="text-sm text-ink-soft">Nothing for you to do on this batch right now.</p>}
         </>
       )}
