@@ -23,9 +23,10 @@ This project connects three tools:
 | Node.js | v22.x | `node -v` |
 | npm | comes with Node | `npm -v` |
 | Truffle | v5.11.5 | `truffle version` |
+| OpenZeppelin contracts | 5.0.2 (pinned, `npm install` here) | `npm ls @openzeppelin/contracts` |
 | Ganache (GUI) | v2.x desktop app | — |
 | MetaMask | browser extension | — |
-| Solidity compiler | v0.5.16 (Truffle's default, downloaded automatically) | `truffle version` |
+| Solidity compiler | 0.8.24, `evmVersion: paris` (pinned in `truffle-config.js`, downloaded automatically) | — |
 
 Install Truffle globally if needed:
 
@@ -33,7 +34,7 @@ Install Truffle globally if needed:
 npm install -g truffle
 ```
 
-> Contracts use `pragma solidity >=0.4.21 <0.7.0`, so Truffle's default solc 0.5.16 compiles them.
+> Ganache 7 has no Shanghai/Cancun opcodes, so the compiler targets `paris`. OpenZeppelin is pinned to 5.0.2 because 5.1+ needs `mcopy`.
 
 ---
 
@@ -66,9 +67,10 @@ networks: {
   development: {
     host: "127.0.0.1",
     port: 7545,
-    network_id: "5777",   // Ganache GUI network ID (chain ID is 1337)
+    network_id: "5777",
   },
 },
+compilers: { solc: { version: "0.8.24", settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: "paris" } } },
 ```
 
 Truffle signs with Ganache's unlocked accounts. **Account 0** deploys the contracts by default.
@@ -97,18 +99,18 @@ MetaMask → Networks → **Add a network manually**:
 
 ---
 
-## 5. Front-end (`app/`)
+## 5. Front-end (`../farmy_web/`)
 
-`app/src/index.js` uses MetaMask's provider (`window.ethereum`). If MetaMask isn't installed, it
-falls back to `http://127.0.0.1:7545`, the Ganache port.
+The Next.js UI is its own project next to this one (see `../architecture.md`). It reads the ABIs and
+addresses from `build/contracts/` through `npm run sync-contracts`. For reads it calls Ganache at
+`http://127.0.0.1:7545`, and MetaMask signs the transactions.
 
 ```bash
-cd app
-npm install
-npm run dev
+npm run migrate                 # here: truffle migrate --reset + sync ABIs into farmy_web
+cd ../farmy_web && npm install && npm run dev
 ```
 
-Open the URL webpack prints (usually `http://localhost:8080`). MetaMask asks for permission to connect.
+Open `http://localhost:3000`. The home page shows a status row for Ganache, MetaMask, the network and each contract.
 
 ---
 
@@ -123,19 +125,19 @@ curl -s -X POST -H 'Content-Type: application/json' --data '{"jsonrpc":"2.0","me
 ```
 
 ```bash
-# 2. Truffle compiles and deploys to Ganache
-truffle migrate --reset --network development
+# 2. Truffle compiles and deploys to Ganache, and syncs the ABIs to farmy_web
+npm run migrate
 ```
 
 ```bash
 # 3. Contract tests pass on Ganache
-truffle test --network development
+npm test
 ```
 
 Results on 2026-11-03:
 - Ganache: `net_version` = `5777`, `eth_chainId` = `0x539` (1337), 20 accounts
-- `truffle migrate`: deployed `Migrations`, `ConvertLib`, `MetaCoin` from account `0x6B34…87ac`
-- `truffle test`: 5 passing
+- `truffle migrate` + `truffle test` passed with the MetaCoin sample (now removed), deployed from account `0x6B34…87ac`
+- solc 0.8.24/paris + OpenZeppelin 5.0.2 ERC-721 and ERC-20 deploy to this Ganache
 
 **MetaMask check:** the imported account shows the same balance as Ganache account 0. After a
 transaction from the dApp, the transaction count goes up in Ganache (**TRANSACTIONS** tab).

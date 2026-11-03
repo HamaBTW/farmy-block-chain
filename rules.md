@@ -1,6 +1,6 @@
 # Rules for the AI Agent — Farmy Mini
 
-Read this file and `idea1.md` fully before writing any code. These rules apply to every task, every session.
+Read this file and `farmy_idea1.md` fully before writing any code. These rules apply to every task, every session.
 
 **Two developers work on this project, each with their own AI agent session.**
 - **Person A** owns `BatchRegistry` (NFT) and has `roadmap-A.md`.
@@ -41,6 +41,7 @@ Some files belong to both people: the interfaces, `truffle-config.js`, `migratio
 - Truffle for compile, migrate and test
 - Ganache for the local chain
 - MetaMask connected to Ganache for manual demos
+- Next.js (App Router, TypeScript) + ethers v6 for the web UI in `farmy_web/` (its own folder, next to the Truffle project `farmy_blockchain/`), connected to the Truffle build artifacts
 - OpenZeppelin contracts for ERC-721 and ERC-20 (do not re-implement standards)
 
 ## 2. Clean Architecture
@@ -48,33 +49,48 @@ Some files belong to both people: the interfaces, `truffle-config.js`, `migratio
 Keep responsibilities separated, one reason to change per file.
 
 ```
-contracts/
-  interfaces/        # IBatchRegistry.sol, IFarmCoin.sol (only function signatures)
-  registry/          # Person A: BatchRegistry.sol
-  payment/           # Person B: FarmCoin.sol, PriceCapEscrow.sol
-  libraries/         # pure helpers only (e.g. PriceMath.sol), only if reused
-  mocks/             # test-only mocks of the other person's interface
-migrations/
-test/
-  registry/          # Person A
-  payment/           # Person B
-  integration/       # shared, written last
-roadmap-A.md         # Person A only
-roadmap-B.md         # Person B only
+farmy_blockchain/      # Truffle project (contracts only)
+  contracts/
+    interfaces/        # IBatchRegistry.sol, IFarmCoin.sol (only function signatures)
+    registry/          # Person A: BatchRegistry.sol
+    payment/           # Person B: FarmCoin.sol, PriceCapEscrow.sol
+    libraries/         # pure helpers only (e.g. PriceMath.sol), only if reused
+    mocks/             # test-only mocks of the other person's interface
+  migrations/
+  test/
+    registry/          # Person A
+    payment/           # Person B
+    integration/       # shared, written last
+  roadmap-A.md         # Person A only
+  roadmap-B.md         # Person B only
+farmy_web/             # Next.js (TS) UI, separate from the Truffle project
+  src/lib/             # shared: wallet, chain config, contract loading
+  src/contracts/       # generated from farmy_blockchain/build/contracts (never edit by hand)
+  src/features/registry/  # Person A: batch screens + hooks
+  src/features/payment/   # Person B: FarmCoin + escrow screens + hooks
+architecture.md        # shared: how the pieces fit together
 rules.md
-idea1.md
+farmy_idea1.md
 ```
 
 **Ownership**
-- Person A owns: `contracts/registry/`, `test/registry/`, `roadmap-A.md`
-- Person B owns: `contracts/payment/`, `test/payment/`, `roadmap-B.md`
-- Shared (change only with a log entry): `contracts/interfaces/`, `migrations/`, `truffle-config.js`, `test/integration/`
+- Person A owns: `contracts/registry/`, `test/registry/`, `farmy_web/src/features/registry/`, `roadmap-A.md`
+- Person B owns: `contracts/payment/`, `test/payment/`, `farmy_web/src/features/payment/`, `roadmap-B.md`
+- Shared (change only with a log entry): `contracts/interfaces/`, `migrations/`, `truffle-config.js`, `test/integration/`, `farmy_web/` outside the two `features/` folders (layout, `src/lib/`, `src/app/` routing, config)
 
 - **Contracts talk only through interfaces.** `PriceCapEscrow` imports `IBatchRegistry`, never `BatchRegistry`.
 - The registry never calls the escrow. The only allowed write from the escrow to the registry is `recordSalePrice`, restricted to the authorized escrow address.
 - Neither contract may contain logic that belongs to the other. A's contract has no balances or payment logic. B's contract has no custody, inspection or batch storage logic. **If one contract could replace the other, the design is wrong.**
 - One contract per file, one responsibility per function.
 - Agree on `IBatchRegistry.sol` first. Both developers code against it.
+
+## 2a. Web UI Rules
+
+- The UI is a thin client: it reads from and sends transactions to the contracts. **No business rule lives only in the UI** (price cap, validation, custody checks are enforced on-chain; the UI may pre-check them only to show a friendly message).
+- The UI talks to contracts only through the generated ABIs in `farmy_web/src/contracts/` (`npm run migrate` in `farmy_blockchain/` migrates and syncs; `npm run dev`/`build` in `farmy_web/` also sync). Never hardcode ABIs or addresses.
+- MetaMask is the only signer. Never ask for, store or log private keys in the UI.
+- Each person builds the screens for their own contract inside their `features/` folder. Shared code (`src/lib/`, layout, nav) changes only with a Decisions Log entry.
+- UI tasks go in each roadmap after the matching contract task is done and tested. A UI task is done when it works against Ganache through MetaMask and `npm run build` passes.
 
 ## 3. Gas Rules (every line costs money)
 
@@ -126,7 +142,7 @@ Be direct, minimal and clean. Every storage write and every extra line has a cos
 
 - Write tests with the code, not after. A task is not done without tests.
 - Cover for each contract: happy path, every revert path, every access control rule, every event.
-- Integration tests must cover the demo scenarios in `idea1.md` section 8 (including the rejected overpriced sale).
+- Integration tests must cover the demo scenarios in `farmy_idea1.md` section 8 (including the rejected overpriced sale).
 - Run `truffle test` before marking any task done. Report gas usage (`truffle test` with the gas reporter if available) and flag any function that looks expensive.
 - Test on Ganache first. No testnet deployment unless asked.
 
@@ -142,7 +158,7 @@ Be direct, minimal and clean. Every storage write and every extra line has a cos
 **Do**
 - Confirm whether you are working for Person A or Person B, then read only that person's roadmap at the start of every session and continue from `Current State`. Also check the other roadmap's `Current State` (read-only) to see if a dependency has been delivered.
 - Do one task at a time, finish it, test it, update the roadmap, then move on.
-- Ask before changing anything in `idea1.md` or the interface files.
+- Ask before changing anything in `farmy_idea1.md` or the interface files.
 - Explain in one or two lines what was done and what is next.
 - Tell the user when a requirement is unclear instead of guessing.
 
@@ -150,7 +166,7 @@ Be direct, minimal and clean. Every storage write and every extra line has a cos
 - Don't start coding before your person's roadmap exists.
 - Don't edit the other person's roadmap, contracts or tests.
 - Don't reimplement the other person's logic inside your contract to avoid waiting. Use a mock.
-- Don't add features outside `idea1.md` (no game client, no UI, no extra tokens, no extra contracts).
+- Don't add features outside `farmy_idea1.md` (no game client, no extra tokens, no extra contracts). The web UI is allowed (see §2a) but must only expose what the contracts do.
 - Don't merge the two contracts or move logic between them to "simplify".
 - Don't change the Solidity version, dependencies or folder structure without logging it.
 - Don't skip tests to save time.
