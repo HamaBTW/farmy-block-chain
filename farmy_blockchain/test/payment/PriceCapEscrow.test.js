@@ -111,4 +111,52 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
       await expectRevert(escrow.createSale(99, frm(100), { from: seller }), "UnknownBatch(uint256)");
     });
   });
+
+  describe("deposit", () => {
+    beforeEach(async () => {
+      await escrow.createSale(BATCH, frm(115), { from: seller });
+      await coin.mint(buyer, frm(200), { from: authority });
+    });
+
+    it("locks the price in escrow and records the buyer", async () => {
+      await coin.approve(escrow.address, frm(115), { from: buyer });
+      const tx = await escrow.deposit(1, { from: buyer });
+
+      assert.equal((await coin.balanceOf(buyer)).toString(), frm(85));
+      assert.equal((await coin.balanceOf(escrow.address)).toString(), frm(115));
+      const sale = await escrow.getSale(1);
+      assert.equal(sale.state, State.Deposited);
+      assert.equal(sale.buyer, buyer);
+
+      const log = tx.logs[0];
+      assert.equal(log.event, "Deposited");
+      assert.equal(log.args.saleId.toString(), "1");
+      assert.equal(log.args.buyer, buyer);
+      assert.equal(log.args.price.toString(), frm(115));
+    });
+
+    it("reverts without enough allowance", async () => {
+      await coin.approve(escrow.address, frm(114), { from: buyer });
+      await expectRevert(escrow.deposit(1, { from: buyer }), "ERC20InsufficientAllowance(address,uint256,uint256)");
+    });
+
+    it("reverts without enough balance", async () => {
+      await coin.approve(escrow.address, frm(115), { from: other });
+      await expectRevert(escrow.deposit(1, { from: other }), "ERC20InsufficientBalance(address,uint256,uint256)");
+    });
+
+    it("reverts when the seller tries to buy", async () => {
+      await expectRevert(escrow.deposit(1, { from: seller }), "SellerCannotBuy()");
+    });
+
+    it("reverts for a second deposit", async () => {
+      await coin.approve(escrow.address, frm(200), { from: buyer });
+      await escrow.deposit(1, { from: buyer });
+      await expectRevert(escrow.deposit(1, { from: buyer }), "WrongState(uint8)");
+    });
+
+    it("reverts for an unknown sale", async () => {
+      await expectRevert(escrow.deposit(42, { from: buyer }), "WrongState(uint8)");
+    });
+  });
 });

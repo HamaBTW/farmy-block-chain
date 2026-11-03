@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
@@ -11,6 +12,7 @@ import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
 /// @dev The contract owner is the market authority. Reads the registry only through IBatchRegistry.
 contract PriceCapEscrow is Ownable {
     using SafeCast for uint256;
+    using SafeERC20 for IERC20;
 
     enum SaleState {
         None,
@@ -39,12 +41,15 @@ contract PriceCapEscrow is Ownable {
 
     event MarkupChanged(uint16 percent);
     event SaleCreated(uint256 indexed saleId, uint256 indexed batchId, address indexed seller, uint256 price);
+    event Deposited(uint256 indexed saleId, address indexed buyer, uint256 price);
 
     error ZeroAddress();
     error ZeroPrice();
     error NotCustodian();
     error PriceAboveCap(uint256 price, uint256 cap);
     error BatchAlreadyListed(uint256 saleId);
+    error WrongState(SaleState state);
+    error SellerCannotBuy();
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -79,6 +84,22 @@ contract PriceCapEscrow is Ownable {
         _sales[saleId] = Sale(msg.sender, SaleState.Created, batchId.toUint64(), address(0), price.toUint96());
         _openSaleOf[batchId] = saleId;
         emit SaleCreated(saleId, batchId, msg.sender, price);
+    }
+
+    /// @notice Locks the sale price in escrow. The caller becomes the buyer.
+    /// @dev Needs a prior FRM `approve` of at least the price to this contract.
+    /// @param saleId The sale id.
+    function deposit(uint256 saleId) external {
+        Sale storage sale = _sales[saleId];
+        SaleState state = sale.state;
+        if (state != SaleState.Created) revert WrongState(state);
+        if (msg.sender == sale.seller) revert SellerCannotBuy();
+
+        sale.buyer = msg.sender;
+        sale.state = SaleState.Deposited;
+        uint256 price = sale.price;
+        emit Deposited(saleId, msg.sender, price);
+        _coin.safeTransferFrom(msg.sender, address(this), price);
     }
 
     /// @notice Full state of a sale (state None for an unknown id).
