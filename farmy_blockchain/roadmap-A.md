@@ -5,8 +5,8 @@ Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** A16 (+B16): `test/integration/lifecycle.test.js`, 9 scenarios on the real contracts; full suite 99 passing
-- **Next task:** A17: end-to-end demo through the UI (after B12–B15 market screens)
+- **Last completed:** A17 (+B17): idea1 §7 lifecycle run fully through the UI (6 accounts, UI only). **All A tasks done**
+- **Next task:** none. Demo script: `DEMO.md` at the repo root
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
 - **Open problems:** none
 
@@ -41,7 +41,7 @@ Shared files touched by A are logged in the Decisions Log.
 
 ### Phase 5 — Integration (after B is done)
 - [x] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios)
-- [!] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask | Blocked: needs A16 and B's market screens
+- [x] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask
 
 ## Gas Report (A10, solc 0.8.24, optimizer 200 runs, Ganache)
 
@@ -69,6 +69,7 @@ Run it with `npm run test:gas`.
 - 2026-11-03 | A03: `Batch { uint128 lastPrice; bool validated; }` in one slot; prices downcast with SafeCast when written (max ~3.4e20 FRM) | One SSTORE per batch instead of two
 - 2026-11-03 | A03: batch ids start at 1 (`_lastBatchId` pre-incremented) | id 0 never exists, so 0 can mean "none"
 - 2026-11-03 | A03: `is IBatchRegistry` moved to A09 | Inheriting it earlier makes the contract abstract and undeployable until all 4 functions exist
+- 2026-11-03 | A17: e2e run on a fresh deploy through the UI only: grant inspector → mint FRM → mint batch @100 → farmer validate rejected → custody to transporter → checkpoint + validate → custody to warehouse → list 150 rejected (cap 120) → list 115 → retailer deposits → release blocked (custody) → custody to retailer → released → warehouse has 115 FRM, last price 115 | Tested with the Playwright wallet stand-in; MetaMask clicks are in DEMO.md
 - 2026-11-03 | Shared `farmy_web/src/lib/tx.ts` + `lib/useChainVersion.ts` added (B12); A's `useRegistryTx` keeps its API but wraps `useContractTx`; A's local `useReload` replaced by `useChainVersion` | Reuse for B's screens; fixes a stale batch list seen once right after a mint
 - 2026-11-03 | A16: one shared file `test/integration/lifecycle.test.js` covers A's and B's scenarios (B16 included) plus "price can't keep rising" (115 → cap 138) | B hadn't written B16; user asked A's agent to cover B's gaps
 - 2026-11-03 | A02: **IBatchRegistry v1 frozen** (file unchanged since 85a6147); B01 review: OK, no changes | Both developers agreed

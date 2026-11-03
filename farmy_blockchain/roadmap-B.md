@@ -5,8 +5,8 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ## Current State
 - **Date:** 2026-11-03
-- **Last completed:** B15 (release + refund buttons with release-condition checklist; done by A's agent). All B tasks except B17 done
-- **Next task:** B17: end-to-end demo with A (A17)
+- **Last completed:** B17 (e2e demo through the UI with A's screens; done by A's agent). **All B tasks done**
+- **Next task:** none. Person B: please review B11–B17 (done by A's agent, see Decisions Log)
 - **Branch:** `person-b` (pushed to origin), branched from `main` at 14f6d40 (A01–A04 included)
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -41,7 +41,7 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 
 ### Phase 5 — Integration (after A is done)
 - [x] B16 | Integration tests in `test/integration/` (B's part): overpriced sale rejected, refund after cancelled sale | Depends on: B11, A10 | Done when: pass against the real `BatchRegistry` on Ganache (A writes happy path, blocked releases, unauthorized calls)
-- [ ] B17 | End-to-end demo through the UI (with A's registry screens) | Depends on: B16, A17 | Done when: idea1 §7 lifecycle runs fully from MetaMask
+- [x] B17 | End-to-end demo through the UI (with A's registry screens) | Depends on: B16, A17 | Done when: idea1 §7 lifecycle runs fully from MetaMask
 
 ## B01 — Review of `IBatchRegistry.sol` (v1 draft, commit 85a6147)
 **Verdict: OK, no changes requested.** Ready to freeze once A confirms.
