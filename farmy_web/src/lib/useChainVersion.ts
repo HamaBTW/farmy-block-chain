@@ -13,9 +13,12 @@ export function useChainVersion() {
 
   useEffect(() => {
     const provider = getReadProvider();
-    provider.on("block", reload);
+    // Own listener per effect run: ethers' on/off are async, so a shared function could be
+    // removed by a late `off` from a previous run (React dev mounts effects twice).
+    const onBlock = () => reload();
+    provider.on("block", onBlock);
     return () => {
-      provider.off("block", reload);
+      provider.off("block", onBlock);
     };
   }, [reload]);
 
