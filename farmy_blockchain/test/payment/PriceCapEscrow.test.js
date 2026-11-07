@@ -1,7 +1,7 @@
 const PriceCapEscrow = artifacts.require("PriceCapEscrow");
 const FarmCoin = artifacts.require("FarmCoin");
 const MockBatchRegistry = artifacts.require("MockBatchRegistry");
-const { expectRevert, ZERO_ADDRESS, frm } = require("./helpers");
+const { expectRevert, ZERO_ADDRESS, frm, buyFrm } = require("./helpers");
 
 const State = { None: "0", Created: "1", Deposited: "2", Released: "3", Refunded: "4" };
 const BATCH = 1;
@@ -11,14 +11,14 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
 
   async function depositedSale(price = frm(115)) {
     await escrow.createSale(BATCH, price, { from: seller });
-    await coin.mint(buyer, price, { from: authority });
+    await buyFrm(coin, buyer, price);
     await coin.approve(escrow.address, price, { from: buyer });
     await escrow.deposit(1, { from: buyer });
   }
 
   beforeEach(async () => {
     registry = await MockBatchRegistry.new();
-    coin = await FarmCoin.new({ from: authority });
+    coin = await FarmCoin.new(frm(1000000), { from: authority });
     escrow = await PriceCapEscrow.new(registry.address, coin.address, 20, { from: authority });
     await registry.setBatch(BATCH, frm(100), false, seller);
     await registry.setEscrow(escrow.address);
@@ -122,7 +122,7 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
   describe("deposit", () => {
     beforeEach(async () => {
       await escrow.createSale(BATCH, frm(115), { from: seller });
-      await coin.mint(buyer, frm(200), { from: authority });
+      await buyFrm(coin, buyer, frm(200));
     });
 
     it("locks the price in escrow and records the buyer", async () => {

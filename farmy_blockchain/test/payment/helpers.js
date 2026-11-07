@@ -15,4 +15,12 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const frm = (n) => web3.utils.toWei(String(n), "ether");
 
-module.exports = { expectRevert, ZERO_ADDRESS, frm };
+const RATE = BigInt(1000);
+
+/** Buys exactly `amountWei` FRM (base units) for `who`, paying amountWei / 1000 wei of ETH. */
+async function buyFrm(coin, who, amountWei) {
+  const value = (BigInt(amountWei) / RATE).toString();
+  return coin.buy({ from: who, value });
+}
+
+module.exports = { expectRevert, ZERO_ADDRESS, frm, buyFrm };

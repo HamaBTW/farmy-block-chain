@@ -4,6 +4,7 @@ const BatchRegistry = artifacts.require("BatchRegistry");
 const FarmCoin = artifacts.require("FarmCoin");
 const PriceCapEscrow = artifacts.require("PriceCapEscrow");
 const { expectRevert } = require("../registry/helpers");
+const { buyFrm } = require("../payment/helpers");
 
 const FRM = (n) => web3.utils.toWei(String(n));
 const STATE = { Created: "1", Deposited: "2", Released: "3", Refunded: "4" };
@@ -15,11 +16,11 @@ contract("Integration: BatchRegistry + PriceCapEscrow", (accounts) => {
 
   beforeEach(async () => {
     registry = await BatchRegistry.new({ from: regulator });
-    coin = await FarmCoin.new({ from: regulator });
+    coin = await FarmCoin.new(FRM(1000000), { from: regulator });
     escrow = await PriceCapEscrow.new(registry.address, coin.address, 20, { from: regulator });
     await registry.setEscrow(escrow.address, { from: regulator });
     await registry.setInspector(inspector, true, { from: regulator });
-    await coin.mint(buyer, FRM(1000), { from: regulator });
+    await buyFrm(coin, buyer, FRM(1000));
   });
 
   /** §7 steps 1–2: farmer mints at 100 FRM, transporter carries it, inspector checks it, warehouse holds it. */
