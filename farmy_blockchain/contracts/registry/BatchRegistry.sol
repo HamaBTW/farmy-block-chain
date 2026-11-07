@@ -33,9 +33,11 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     mapping(address => bool) private _inspectors;
     address private _escrow;
     uint256 private _lastId;
+    uint256 public constant MAX_PARTS = 10;
 
     event AssetRegistered(uint256 indexed batchId, Kind kind, address indexed to);
     event LotHarvested(uint256 indexed batchId, uint256 indexed landId, uint256 quantity);
+    event LotSplit(uint256 indexed batchId, uint256 indexed childId, uint256 quantity);
     event CustodyTransferred(uint256 indexed batchId, address indexed from, address indexed to);
     event CheckpointAdded(uint256 indexed batchId, address indexed inspector, bytes32 dataHash);
     event BatchValidated(uint256 indexed batchId, address indexed inspector);
@@ -50,6 +52,7 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     error NotCustodian();
     error ZeroQuantity();
     error LotClosed();
+    error BadSplit();
 
     modifier onlyInspector() {
         if (!_inspectors[msg.sender]) revert NotInspector();
@@ -85,6 +88,51 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
         lot.landId = SafeCast.toUint64(landId);
         lot.quantity = SafeCast.toUint128(quantity);
         emit LotHarvested(lotId, landId, quantity);
+    }
+
+    /// @notice Splits a lot into 2–10 smaller lots so parts can go to different places.
+    ///         The parent is closed (never burned, so its history stays). Each child keeps the land,
+    ///         the parent link, the validation and the URI; the price is shared in proportion.
+    /// @param lotId The lot to split; the caller must hold it.
+    /// @param quantities Units of each child, each > 0, adding up to the lot's quantity.
+    /// @return childIds The new lot ids, in the order of `quantities`.
+    function splitLot(uint256 lotId, uint256[] calldata quantities) external returns (uint256[] memory childIds) {
+        if (_requireOwned(lotId) != msg.sender) revert NotCustodian();
+        Asset storage parent = _assets[lotId];
+        if (parent.kind != Kind.Lot) revert WrongKind();
+        if (parent.closed) revert LotClosed();
+        uint256 parts = quantities.length;
+        if (parts < 2 || parts > MAX_PARTS) revert BadSplit();
+        uint256 total;
+        for (uint256 i; i < parts; ++i) {
+            if (quantities[i] == 0) revert BadSplit();
+            total += quantities[i];
+        }
+        if (total != parent.quantity) revert BadSplit();
+
+        parent.closed = true;
+        uint256 parentPrice = parent.lastPrice;
+        uint256 priceLeft = parentPrice;
+        string memory uri = tokenURI(lotId);
+        childIds = new uint256[](parts);
+        for (uint256 i; i < parts; ++i) {
+            uint256 price = i == parts - 1 ? priceLeft : (parentPrice * quantities[i]) / total;
+            priceLeft -= price;
+            uint256 childId = _create(msg.sender, Kind.Lot, uri, price);
+            _initChild(childId, lotId, quantities[i]);
+            childIds[i] = childId;
+            emit LotSplit(lotId, childId, quantities[i]);
+        }
+    }
+
+    /// @dev Writes the per-child fields of a split (kept out of `splitLot` to avoid stack-too-deep).
+    function _initChild(uint256 childId, uint256 parentId, uint256 quantity) private {
+        Asset storage parent = _assets[parentId];
+        Asset storage child = _assets[childId];
+        child.landId = parent.landId;
+        child.parentId = SafeCast.toUint64(parentId);
+        child.quantity = SafeCast.toUint128(quantity);
+        child.validated = parent.validated;
     }
 
     /// @notice Hands the asset (and the NFT) to the next holder. Closed lots can't move.

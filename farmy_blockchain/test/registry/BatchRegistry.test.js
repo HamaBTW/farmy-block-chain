@@ -335,4 +335,83 @@ contract("BatchRegistry", ([regulator, other, inspector, escrow, farmer, transpo
       assert.isTrue(await asInterface.isActive(1));
     });
   });
+
+  describe("splitLot", () => {
+    const LOT_PRICE = web3.utils.toWei("1000");
+
+    beforeEach(async () => {
+      await registry.registerAsset(farmer, KIND.Land, URI, PRICE, { from: regulator }); // #1
+      await registry.harvest(1, "farmy:olives", 1000, LOT_PRICE, { from: farmer }); // #2
+      await registry.setInspector(inspector, true, { from: regulator });
+    });
+
+    it("splits into child lots that keep the land, parent, validation and URI", async () => {
+      await registry.checkAndValidate(2, HASH, { from: inspector });
+      const tx = await registry.splitLot(2, [600, 400], { from: farmer });
+      for (const [id, qty] of [[3, "600"], [4, "400"]]) {
+        assert.equal(await registry.ownerOf(id), farmer);
+        const info = await registry.assetInfo(id);
+        assert.equal(info.kind.toString(), String(KIND.Lot));
+        assert.equal(info.landId.toString(), "1");
+        assert.equal(info.parentId.toString(), "2");
+        assert.equal(info.quantity.toString(), qty);
+        assert.isTrue(await registry.isValidated(id));
+        assert.equal(await registry.tokenURI(id), "farmy:olives");
+      }
+      const splits = tx.logs.filter((l) => l.event === "LotSplit");
+      assert.deepEqual(splits.map((l) => [l.args.batchId.toString(), l.args.childId.toString(), l.args.quantity.toString()]), [["2", "3", "600"], ["2", "4", "400"]]);
+      assert.equal(tx.logs.filter((l) => l.event === "AssetRegistered").length, 2);
+    });
+
+    it("shares the price in proportion, the last part takes the rounding", async () => {
+      await registry.harvest(1, URI, 3, "100", { from: farmer }); // #3: 3 units for 100 wei
+      await registry.splitLot(3, [1, 1, 1], { from: farmer }); // 33, 33, 34
+      assert.equal((await registry.getLastPrice(4)).toString(), "33");
+      assert.equal((await registry.getLastPrice(5)).toString(), "33");
+      assert.equal((await registry.getLastPrice(6)).toString(), "34");
+      await registry.splitLot(2, [600, 400], { from: farmer });
+      assert.equal((await registry.getLastPrice(7)).toString(), web3.utils.toWei("600"));
+      assert.equal((await registry.getLastPrice(8)).toString(), web3.utils.toWei("400"));
+    });
+
+    it("keeps an unvalidated parent's children unvalidated", async () => {
+      await registry.splitLot(2, [500, 500], { from: farmer });
+      assert.isFalse(await registry.isValidated(3));
+    });
+
+    it("closes the parent: no transfer, split, check or validation, but its data stays readable", async () => {
+      await registry.splitLot(2, [600, 400], { from: farmer });
+      assert.isFalse(await registry.isActive(2));
+      assert.isTrue((await registry.assetInfo(2)).closed);
+      assert.equal(await registry.custodianOf(2), farmer);
+      await expectRevert(registry.transferCustody(2, other, { from: farmer }), "LotClosed()");
+      await expectRevert(registry.transferFrom(farmer, other, 2, { from: farmer }), "LotClosed()");
+      await expectRevert(registry.splitLot(2, [500, 500], { from: farmer }), "LotClosed()");
+      await expectRevert(registry.addCheckpoint(2, HASH, { from: inspector }), "LotClosed()");
+      await expectRevert(registry.checkAndValidate(2, HASH, { from: inspector }), "LotClosed()");
+    });
+
+    it("allows 2 to 10 parts that add up to the quantity", async () => {
+      await expectRevert(registry.splitLot(2, [1000], { from: farmer }), "BadSplit()");
+      await expectRevert(registry.splitLot(2, Array(11).fill(1).concat([989]), { from: farmer }), "BadSplit()");
+      await expectRevert(registry.splitLot(2, [600, 300], { from: farmer }), "BadSplit()");
+      await expectRevert(registry.splitLot(2, [1000, 0], { from: farmer }), "BadSplit()");
+      await registry.splitLot(2, Array(9).fill(100).concat([100]), { from: farmer }); // exactly 10 parts
+      assert.equal((await registry.assetInfo(12)).quantity.toString(), "100");
+    });
+
+    it("is holder only and lots only", async () => {
+      await expectRevert(registry.splitLot(2, [600, 400], { from: other }), "NotCustodian()");
+      await expectRevert(registry.splitLot(1, [600, 400], { from: farmer }), "WrongKind()");
+      await expectRevert(registry.splitLot(99, [600, 400], { from: farmer }), "ERC721NonexistentToken(uint256)");
+    });
+
+    it("lets each child move to a different place", async () => {
+      await registry.splitLot(2, [600, 400], { from: farmer });
+      await registry.transferCustody(3, transporter, { from: farmer });
+      await registry.transferCustody(4, other, { from: farmer });
+      assert.equal(await registry.custodianOf(3), transporter);
+      assert.equal(await registry.custodianOf(4), other);
+    });
+  });
 });
