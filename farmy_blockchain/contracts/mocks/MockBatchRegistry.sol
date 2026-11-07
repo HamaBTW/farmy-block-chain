@@ -15,6 +15,7 @@ contract MockBatchRegistry is IBatchRegistry {
 
     mapping(uint256 => Batch) private _batches;
     address private _escrow;
+    mapping(uint256 => bool) private _inactive;
 
     error UnknownBatch(uint256 batchId);
     error NotEscrow();
@@ -59,6 +60,17 @@ contract MockBatchRegistry is IBatchRegistry {
         if (msg.sender != _escrow) revert NotEscrow();
         _existing(batchId);
         _batches[batchId].lastPrice = price;
+    }
+
+    /// @notice Marks a batch as closed (split) or active again.
+    function setActive(uint256 batchId, bool active) external {
+        _inactive[batchId] = !active;
+    }
+
+    /// @inheritdoc IBatchRegistry
+    function isActive(uint256 batchId) external view returns (bool) {
+        _existing(batchId);
+        return !_inactive[batchId];
     }
 
     function _existing(uint256 batchId) private view returns (Batch storage batch) {

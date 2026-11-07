@@ -7,23 +7,35 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IBatchRegistry} from "../interfaces/IBatchRegistry.sol";
 
-/// @title BatchRegistry
-/// @notice One NFT per physical batch of agricultural goods (simulated assets).
-///         Tracks custody, validation and the last declared price. Holds no money.
-/// @dev The NFT owner is the custodian. The contract owner is the regulator.
+/// @title BatchRegistry (Farm registry)
+/// @notice One NFT per farm asset: land parcels, big machines, and lots of produce harvested from land.
+///         Tracks custody, inspection, validation and the last declared price. Holds no money. Test chain only.
+/// @dev The NFT owner is the custodian. The contract owner is the regulator (also the land office).
 contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
-    /// @dev Packed into one storage slot (16 + 1 bytes).
-    struct Batch {
-        uint128 lastPrice;
-        bool validated;
+    enum Kind {
+        Land,
+        Machine,
+        Lot
     }
 
-    mapping(uint256 => Batch) private _batches;
+    /// @dev Slot 1: lastPrice, validated, kind, closed, landId (27 bytes). Slot 2: parentId, quantity (24 bytes).
+    struct Asset {
+        uint128 lastPrice;
+        bool validated;
+        Kind kind;
+        bool closed;
+        uint64 landId;
+        uint64 parentId;
+        uint128 quantity;
+    }
+
+    mapping(uint256 => Asset) private _assets;
     mapping(address => bool) private _inspectors;
     address private _escrow;
-    uint256 private _lastBatchId;
+    uint256 private _lastId;
 
-    event BatchMinted(uint256 indexed batchId, address indexed farmer);
+    event AssetRegistered(uint256 indexed batchId, Kind kind, address indexed to);
+    event LotHarvested(uint256 indexed batchId, uint256 indexed landId, uint256 quantity);
     event CustodyTransferred(uint256 indexed batchId, address indexed from, address indexed to);
     event CheckpointAdded(uint256 indexed batchId, address indexed inspector, bytes32 dataHash);
     event BatchValidated(uint256 indexed batchId, address indexed inspector);
@@ -34,6 +46,10 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     error NotInspector();
     error AlreadyValidated();
     error NotEscrow();
+    error WrongKind();
+    error NotCustodian();
+    error ZeroQuantity();
+    error LotClosed();
 
     modifier onlyInspector() {
         if (!_inspectors[msg.sender]) revert NotInspector();
@@ -43,62 +59,70 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     /// @notice Deploys the registry with the deployer as regulator.
     constructor() ERC721("Farmy Batch", "FBATCH") Ownable(msg.sender) {}
 
-    /// @notice Mints a new batch NFT. The receiver becomes its first custodian.
-    /// @param to First custodian (usually the farmer).
-    /// @param metadataURI Off-chain metadata (type, origin, quantity) URI or hash.
+    /// @notice Registers a land parcel or a machine (the regulator acts as the land office).
+    /// @param to First holder (usually the farmer).
+    /// @param kind Land or Machine (lots come from `harvest`).
+    /// @param uri Off-chain details URI or hash.
     /// @param initialPrice Declared price in FarmCoin base units.
-    /// @return batchId The new batch id (starts at 1).
-    function mintBatch(address to, string calldata metadataURI, uint256 initialPrice)
-        external
-        returns (uint256 batchId)
-    {
-        if (initialPrice == 0) revert ZeroPrice();
-        // Ids start at 1 and can't realistically overflow.
-        unchecked {
-            batchId = ++_lastBatchId;
-        }
-        _batches[batchId].lastPrice = SafeCast.toUint128(initialPrice);
-        _mint(to, batchId);
-        _setTokenURI(batchId, metadataURI);
-        emit BatchMinted(batchId, to);
-        emit PriceRecorded(batchId, initialPrice);
+    /// @return id The new token id (ids start at 1 and are shared by all kinds).
+    function registerAsset(address to, Kind kind, string calldata uri, uint256 initialPrice) external onlyOwner returns (uint256 id) {
+        if (kind == Kind.Lot) revert WrongKind();
+        id = _create(to, kind, uri, initialPrice);
     }
 
-    /// @notice Hands the physical goods (and the NFT) to the next custodian.
-    /// @param batchId The batch NFT id.
-    /// @param newCustodian Next holder (transporter, warehouse, retailer, buyer).
+    /// @notice Creates a lot of produce from a land parcel. The lot goes to the land holder.
+    /// @param landId The land token the produce comes from.
+    /// @param uri Off-chain details (product, unit, harvest date) URI or hash.
+    /// @param quantity Whole units (the unit lives in the details), must be > 0.
+    /// @param initialPrice Declared price of the whole lot in FarmCoin base units.
+    /// @return lotId The new lot id.
+    function harvest(uint256 landId, string calldata uri, uint256 quantity, uint256 initialPrice) external returns (uint256 lotId) {
+        if (_requireOwned(landId) != msg.sender) revert NotCustodian();
+        if (_assets[landId].kind != Kind.Land) revert WrongKind();
+        if (quantity == 0) revert ZeroQuantity();
+        lotId = _create(msg.sender, Kind.Lot, uri, initialPrice);
+        Asset storage lot = _assets[lotId];
+        lot.landId = SafeCast.toUint64(landId);
+        lot.quantity = SafeCast.toUint128(quantity);
+        emit LotHarvested(lotId, landId, quantity);
+    }
+
+    /// @notice Hands the asset (and the NFT) to the next holder. Closed lots can't move.
+    /// @param batchId The token id.
+    /// @param newCustodian Next holder.
     function transferCustody(uint256 batchId, address newCustodian) external {
-        // OZ checks: batch exists, caller is the custodian, receiver isn't zero.
+        // OZ checks: token exists, caller is the holder, receiver isn't zero. `_update` refuses closed lots.
         _transfer(msg.sender, newCustodian, batchId);
     }
 
-    /// @notice Logs an inspection checkpoint. Only the hash goes on-chain.
-    /// @param batchId The batch NFT id.
-    /// @param dataHash Hash of the off-chain record (weight, temperature, location, time).
+    /// @notice Logs an inspection checkpoint along the way. Only the hash goes on-chain.
+    /// @param batchId The token id.
+    /// @param dataHash Hash of the off-chain record (weight, temperature, place, time).
     function addCheckpoint(uint256 batchId, bytes32 dataHash) external onlyInspector {
-        _requireOwned(batchId);
+        _active(batchId);
         emit CheckpointAdded(batchId, msg.sender, dataHash);
     }
 
-    /// @notice Marks a batch as validated by an inspector. Can only happen once.
-    /// @param batchId The batch NFT id.
-    function validateBatch(uint256 batchId) external onlyInspector {
-        _requireOwned(batchId);
-        Batch storage batch = _batches[batchId];
-        if (batch.validated) revert AlreadyValidated();
-        batch.validated = true;
+    /// @notice Records the inspector's check, then validates, in one transaction (checked, then validated).
+    /// @param batchId The token id.
+    /// @param dataHash Hash of the off-chain check record.
+    function checkAndValidate(uint256 batchId, bytes32 dataHash) external onlyInspector {
+        Asset storage asset = _active(batchId);
+        if (asset.validated) revert AlreadyValidated();
+        asset.validated = true;
+        emit CheckpointAdded(batchId, msg.sender, dataHash);
         emit BatchValidated(batchId, msg.sender);
     }
 
     /// @notice Records a completed sale price as the new last price.
     /// @dev Only the escrow set by the regulator may call this.
-    /// @param batchId The batch NFT id.
+    /// @param batchId The token id.
     /// @param price Sale price in FarmCoin base units.
     function recordSalePrice(uint256 batchId, uint256 price) external {
         if (msg.sender != _escrow) revert NotEscrow();
         if (price == 0) revert ZeroPrice();
         _requireOwned(batchId);
-        _batches[batchId].lastPrice = SafeCast.toUint128(price);
+        _assets[batchId].lastPrice = SafeCast.toUint128(price);
         emit PriceRecorded(batchId, price);
     }
 
@@ -118,27 +142,46 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
     }
 
     /// @notice Whether `account` is an inspector.
-    /// @param account Address to check.
     function isInspector(address account) external view returns (bool) {
         return _inspectors[account];
     }
 
-    /// @notice Last declared price (initial price, then each released sale).
-    /// @param batchId The batch NFT id.
+    /// @notice Kind, links and quantity of a token.
+    /// @param id The token id.
+    /// @return kind Land, Machine or Lot.
+    /// @return landId Land a lot comes from (0 for land and machines).
+    /// @return parentId Lot this lot was split from (0 if none).
+    /// @return quantity Units in a lot (0 for land and machines).
+    /// @return closed True once a lot was split.
+    function assetInfo(uint256 id)
+        external
+        view
+        returns (Kind kind, uint256 landId, uint256 parentId, uint256 quantity, bool closed)
+    {
+        _requireOwned(id);
+        Asset storage a = _assets[id];
+        return (a.kind, a.landId, a.parentId, a.quantity, a.closed);
+    }
+
+    /// @inheritdoc IBatchRegistry
+    function isActive(uint256 batchId) external view returns (bool) {
+        _requireOwned(batchId);
+        return !_assets[batchId].closed;
+    }
+
+    /// @inheritdoc IBatchRegistry
     function getLastPrice(uint256 batchId) external view returns (uint256) {
         _requireOwned(batchId);
-        return _batches[batchId].lastPrice;
+        return _assets[batchId].lastPrice;
     }
 
-    /// @notice Whether an inspector has validated the batch.
-    /// @param batchId The batch NFT id.
+    /// @inheritdoc IBatchRegistry
     function isValidated(uint256 batchId) external view returns (bool) {
         _requireOwned(batchId);
-        return _batches[batchId].validated;
+        return _assets[batchId].validated;
     }
 
-    /// @notice Address that currently holds the physical goods.
-    /// @param batchId The batch NFT id.
+    /// @inheritdoc IBatchRegistry
     function custodianOf(uint256 batchId) external view returns (address) {
         return _requireOwned(batchId);
     }
@@ -148,8 +191,31 @@ contract BatchRegistry is ERC721URIStorage, Ownable, IBatchRegistry {
         return _escrow;
     }
 
-    /// @dev Every transfer is a custody change, including plain ERC-721 transfers.
+    /// @dev Mints a token with its first price. Every new token emits AssetRegistered + PriceRecorded.
+    function _create(address to, Kind kind, string memory uri, uint256 price) internal returns (uint256 id) {
+        if (price == 0) revert ZeroPrice();
+        unchecked {
+            id = ++_lastId;
+        }
+        Asset storage a = _assets[id];
+        a.lastPrice = SafeCast.toUint128(price);
+        a.kind = kind;
+        _mint(to, id);
+        _setTokenURI(id, uri);
+        emit AssetRegistered(id, kind, to);
+        emit PriceRecorded(id, price);
+    }
+
+    /// @dev Existing, not-closed token.
+    function _active(uint256 id) internal view returns (Asset storage a) {
+        _requireOwned(id);
+        a = _assets[id];
+        if (a.closed) revert LotClosed();
+    }
+
+    /// @dev Every transfer is a custody change (plain ERC-721 transfers too). Closed lots never move.
     function _update(address to, uint256 tokenId, address auth) internal override returns (address from) {
+        if (_assets[tokenId].closed) revert LotClosed();
         from = super._update(to, tokenId, auth);
         if (from != address(0)) emit CustodyTransferred(tokenId, from, to);
     }

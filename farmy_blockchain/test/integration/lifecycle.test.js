@@ -9,6 +9,7 @@ const { buyFrm } = require("../payment/helpers");
 const FRM = (n) => web3.utils.toWei(String(n));
 const STATE = { Created: "1", Deposited: "2", Released: "3", Refunded: "4" };
 const CHECKPOINT = web3.utils.soliditySha3("weight=120kg;temp=4C;loc=Sfax");
+const KIND = { Land: 0, Machine: 1, Lot: 2 };
 
 contract("Integration: BatchRegistry + PriceCapEscrow", (accounts) => {
   const [regulator, inspector, farmer, transporter, warehouse, buyer, other] = accounts;
@@ -25,10 +26,10 @@ contract("Integration: BatchRegistry + PriceCapEscrow", (accounts) => {
 
   /** §7 steps 1–2: farmer mints at 100 FRM, transporter carries it, inspector checks it, warehouse holds it. */
   async function batchAtWarehouse({ validate }) {
-    await registry.mintBatch(farmer, "ipfs://demo/tomatoes", FRM(100), { from: farmer });
+    await registry.registerAsset(farmer, KIND.Machine, "farmy:demo-machine", FRM(100), { from: regulator });
     await registry.transferCustody(1, transporter, { from: farmer });
     await registry.addCheckpoint(1, CHECKPOINT, { from: inspector });
-    if (validate) await registry.validateBatch(1, { from: inspector });
+    if (validate) await registry.checkAndValidate(1, CHECKPOINT, { from: inspector });
     await registry.transferCustody(1, warehouse, { from: transporter });
   }
 
@@ -122,9 +123,9 @@ contract("Integration: BatchRegistry + PriceCapEscrow", (accounts) => {
   });
 
   it("unauthorized addresses cannot validate, add a checkpoint, or record a sale price", async () => {
-    await registry.mintBatch(farmer, "ipfs://demo/tomatoes", FRM(100), { from: farmer });
+    await registry.registerAsset(farmer, KIND.Machine, "farmy:demo-machine", FRM(100), { from: regulator });
     for (const from of [farmer, other, regulator]) {
-      await expectRevert(registry.validateBatch(1, { from }), "NotInspector()");
+      await expectRevert(registry.checkAndValidate(1, CHECKPOINT, { from }), "NotInspector()");
       await expectRevert(registry.addCheckpoint(1, CHECKPOINT, { from }), "NotInspector()");
     }
     // Only the escrow contract may write prices, not even the regulator or the custodian

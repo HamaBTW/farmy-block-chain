@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title IBatchRegistry
+/// @title IBatchRegistry (v2)
 /// @notice What PriceCapEscrow (Person B) may use from BatchRegistry (Person A).
 /// @dev Shared file. Changing it after agreement needs both developers.
 ///      Prices are uint256 in FarmCoin base units (18 decimals).
@@ -24,4 +24,8 @@ interface IBatchRegistry {
     /// @param batchId The batch NFT id.
     /// @param price Sale price in FarmCoin base units, must be > 0.
     function recordSalePrice(uint256 batchId, uint256 price) external;
+
+    /// @notice False once a lot was split into smaller lots (it can't move or be sold any more).
+    /// @param batchId The token id.
+    function isActive(uint256 batchId) external view returns (bool);
 }
