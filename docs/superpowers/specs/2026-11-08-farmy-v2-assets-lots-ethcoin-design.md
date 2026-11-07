@@ -57,13 +57,13 @@ metadata, as in v1.
 | `checkAndValidate(id, dataHash)` | inspector | active token; not yet validated (`AlreadyValidated`). Emits `CheckpointAdded` then `BatchValidated` in one transaction. **Replaces `validateBatch`**, which is removed |
 | `addCheckpoint(id, dataHash)` | inspector | unchanged, but refuses closed lots |
 | `transferCustody(id, to)` | custodian | unchanged, but refuses closed lots |
-| views | anyone | `kindOf(id)`, `lotInfo(id) → (landId, parentId, quantity, closed)`, `isActive(id)` |
+| views | anyone | `assetInfo(id) → (kind, landId, parentId, quantity, closed)`, `isActive(id)` |
 
 - **Closed lots:** a closed lot can't be transferred (checked in the `_update` override), split,
   checked or validated, all with `LotClosed`. Its history stays readable because it is never burned.
 - **Removed:** `mintBatch`, replaced by `registerAsset` and `harvest`.
 
-**Events:** `AssetRegistered(id, kind, to)`, `LotHarvested(lotId, landId, quantity)`,
+**Events:** `AssetRegistered(id, kind, to)` for **every** new token (land, machine, harvested lot, split child), `LotHarvested(lotId, landId indexed, quantity)`,
 `LotSplit(parentId, childId, quantity)` (one per child), plus the v1 `CustodyTransferred`,
 `CheckpointAdded`, `BatchValidated` and `PriceRecorded`. `PriceRecorded` is emitted for every new token,
 including each child. `BatchMinted` is removed.
@@ -88,7 +88,7 @@ The cap formula, the state machine and the other functions don't change.
 
 ### 1.4 `FarmCoin`: capped and ETH-backed
 
-- `ERC20Capped(1_000_000 × 10^18)` and `ReentrancyGuard`. **No `Ownable` and no `mint`:** FRM only comes
+- `ERC20Capped(maxSupply)` and `ReentrancyGuard`. `maxSupply` is a constructor argument: the migration passes 1,000,000 FRM, and tests pass a small cap because Ganache accounts only hold 100 ETH. **No `Ownable` and no `mint`:** FRM only comes
   from buying.
 - `RATE = 1000` (constant): 1 wei buys 1000 FRM base units, so 1 ETH = 1000 FRM.
 - `buy()` is payable and mints `msg.value × RATE` to the caller.
@@ -106,7 +106,7 @@ The cap formula, the state machine and the other functions don't change.
 ### 1.5 Migrations
 
 - `1_deploy_registry.js`: unchanged.
-- `2_deploy_payment.js`: unchanged calls. The FarmCoin constructor takes no owner now.
+- `2_deploy_payment.js`: deploys `FarmCoin(1,000,000 FRM)`; the other calls are unchanged.
 - Neither migration seeds demo data.
 
 ---
