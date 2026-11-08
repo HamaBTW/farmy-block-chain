@@ -10,7 +10,7 @@ All assets are **simulated**. There are no real goods or payments.
 | [architecture.md](architecture.md) | How the contracts and the web app fit together |
 | [farmy_blockchain/configuration.md](farmy_blockchain/configuration.md) | Ganache, MetaMask and Truffle setup |
 | [farmy_blockchain/roadmap-A.md](farmy_blockchain/roadmap-A.md) | Person A tasks (BatchRegistry) |
-| [DEMO.md](DEMO.md) | **5–7 min teacher demo script** + simple explanation + likely questions |
+| [DEMO.md](DEMO.md) | **≈ 7 min teacher demo script** + simple explanation + likely questions |
 | [manual-test-A.md](manual-test-A.md) | Person A manual test checklist (contract + UI with MetaMask) |
 | [farmy_blockchain/roadmap-B.md](farmy_blockchain/roadmap-B.md) | Person B tasks (FarmCoin + PriceCapEscrow) |
 | [farmy_web/DESIGN_SYSTEM.md](farmy_web/DESIGN_SYSTEM.md) | UI look and rules: colors, type, components, words |

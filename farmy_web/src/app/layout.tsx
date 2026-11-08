@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "Farmy",
-  description: "Follow farm batches from field to buyer and sell them at a capped price (simulated goods on a local test chain).",
+  description: "Follow farm assets and lots from field to buyer and sell them at a capped price (simulated goods on a local test chain).",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

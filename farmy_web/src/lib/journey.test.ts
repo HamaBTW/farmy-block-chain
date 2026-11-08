@@ -78,6 +78,12 @@ test("an unvalidated lot can't be split yet; a split (closed) lot has no steps",
   assert.deepEqual(actions({ ...base, validated: true, closed: true }), []);
 });
 
+test("closed lot with an open sale can still be cleared", () => {
+  const closed: JourneyState = { ...base, validated: true, closed: true, custodian: seller };
+  assert.deepEqual(actions({ ...closed, sale: sale("Created", "0x") }), ["cancelListing*"]);
+  assert.deepEqual(actions({ ...closed, sale: sale("Deposited") }), ["refundMe*", "refundBuyer"]);
+});
+
 test("no split while the lot is listed", () => {
   const s: JourneyState = { ...base, custodian: seller, validated: true, sale: sale("Created", "0x") };
   assert.ok(!actions(s).includes("split"));

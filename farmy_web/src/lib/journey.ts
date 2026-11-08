@@ -36,7 +36,12 @@ const step = (action: StepAction, who: Who, primary = false): Step => ({ action,
  * The contracts still enforce every rule; this only decides what to show.
  */
 export function nextSteps(s: JourneyState): Step[] {
-  if (s.closed) return [];
+  if (s.closed) {
+    // A split lot can't move, but a sale opened before the split must still be clearable.
+    if (!s.sale) return [];
+    if (s.sale.state === "Created") return [step("cancelListing", by(s.sale.seller), true)];
+    return [step("refundMe", by(s.sale.buyer), true), step("refundBuyer", by(s.sale.seller))];
+  }
   const inspect = (primary: boolean) => [step("validate", { kind: "inspector" }, primary), step("addCheckpoint", { kind: "inspector" })];
   // Land holders harvest; lot holders split once the lot is validated (and not listed).
   const holderExtras = (): Step[] =>

@@ -10,13 +10,17 @@ import { mined } from "@/lib/tx";
 
 /** Regulator (contract owner) tools: who may inspect, and which escrow may record sale prices. */
 export function RegulatorPanel({ version, onDone }: { version: number; onDone: () => void }) {
-  const { people, chainRoles } = usePeople();
+  const { people, chainRoles, refreshRoles } = usePeople();
+  const done = () => {
+    refreshRoles();
+    onDone();
+  };
 
   return (
     <div className="space-y-8">
       <section className="space-y-3">
         <h3 className="font-display text-lg font-bold">🔍 Inspectors</h3>
-        <p className="text-sm text-ink-soft">Inspectors add checkpoints and validate batches. Turn the role on or off per person.</p>
+        <p className="text-sm text-ink-soft">Inspectors add checkpoints and validate assets. Turn the role on or off per person.</p>
         <ul className="divide-y divide-line rounded-xl border border-line">
           {people.map((p) => {
             const on = hasChainRole(chainRoles, "inspector", p.address);
@@ -31,14 +35,14 @@ export function RegulatorPanel({ version, onDone }: { version: number; onDone: (
                   done={on ? `${p.name} is no longer an inspector` : `${p.name} is now an inspector`}
                   variant={on ? "danger" : "secondary"}
                   send={(signed) => mined(signed("BatchRegistry").setInspector(p.address, !on))}
-                  onDone={onDone}
+                  onDone={done}
                 />
               </li>
             );
           })}
         </ul>
       </section>
-      <EscrowLink version={version} onDone={onDone} />
+      <EscrowLink version={version} onDone={done} />
     </div>
   );
 }
@@ -61,7 +65,7 @@ function EscrowLink({ version, onDone }: { version: number; onDone: () => void }
   return (
     <section className="space-y-3">
       <h3 className="font-display text-lg font-bold">💱 Market link</h3>
-      <p className="text-sm text-ink-soft">Only the linked escrow may record a sale as the batch&apos;s new last price.</p>
+      <p className="text-sm text-ink-soft">Only the linked escrow may record a sale as the asset&apos;s new last price.</p>
       {linked ? (
         <Chip tone="field">Linked to the deployed escrow</Chip>
       ) : deployed ? (

@@ -43,7 +43,7 @@ export function MarketHome() {
         <div className="max-w-prose">
           <h1 className="font-display text-3xl font-bold">Market</h1>
           <p className="mt-1 text-ink-soft">
-            Land, machines and lots for sale. The buyer&apos;s FRM waits in escrow until the batch is validated and handed over. No sale can go above the last price
+            Land, machines and lots for sale. The buyer&apos;s FRM waits in escrow until the asset is validated and handed over. No sale can go above the last price
             plus {info ? `${info.markup}%` : "the max markup"}.
           </p>
         </div>

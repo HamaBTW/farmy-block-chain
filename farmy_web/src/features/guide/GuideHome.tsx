@@ -172,7 +172,7 @@ function Rules() {
     <Section id="rules" title="The rules">
       <Card className="space-y-3">
         <p className="font-semibold">Price cap</p>
-        <p className="text-sm text-ink-soft">A sale can cost at most the batch&apos;s last price plus the max markup. Each completed sale becomes the new last price, so prices can&apos;t climb freely along the chain.</p>
+        <p className="text-sm text-ink-soft">A sale can cost at most the asset&apos;s last price plus the max markup. Each completed sale becomes the new last price, so prices can&apos;t climb freely along the chain.</p>
         <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
           <Field label="Last price (FRM)">
             <input className="input tabular" inputMode="decimal" value={last} onChange={(e) => setLast(e.target.value)} />
@@ -186,7 +186,7 @@ function Rules() {
       <Card className="space-y-2">
         <p className="font-semibold">Payment and refunds</p>
         <ul className="list-disc space-y-1 pl-5 text-sm">
-          <li>The payment is released only when an inspector has validated the batch and the buyer holds the goods.</li>
+          <li>The payment is released only when an inspector has validated the asset and the buyer holds the goods.</li>
           <li>The seller can cancel a sale and refund the buyer at any time before release.</li>
           <li>The buyer can take the money back only while those two conditions aren&apos;t both met. Sellers should hand goods over after validation.</li>
         </ul>

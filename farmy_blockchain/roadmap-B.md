@@ -91,6 +91,7 @@ Nothing flagged. `createSale` is the most expensive call: 3 new slots (2 for `Sa
 Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy path, revert paths, access rule and event tested (59 tests in the whole suite, 0 warnings).
 
 ## Decisions Log
+- 2026-11-08 | V2 commits' Co-Authored-By trailers name the model that did each task (Sonnet/Haiku/Opus 5.5) instead of the plan's single Opus line | Accepted; history not rewritten
 - 2026-11-08 | **IBatchRegistry v2 frozen**: adds `isActive` (false for split lots); escrow refuses closed lots with `NotActive` | Teacher review: splittable lots
 - 2026-11-03 | B works on branch `person-b`, from `main` at 14f6d40 | rules §7
 - 2026-11-03 | `FarmCoin` = OZ `ERC20` + `Ownable`, only addition is `mint` (onlyOwner); no cap, no burn | Smallest token that fits idea1 ("minted by the market authority")

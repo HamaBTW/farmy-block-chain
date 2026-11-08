@@ -134,7 +134,6 @@ Say the **💬 lines** out loud; do the **🖱️ lines**. Use the "Acting as" m
 | A page didn't update | It refreshes on every new block (~4 s); otherwise reload the page |
 | "not deployed" on the home page | Ganache was restarted: `npm run migrate`, then redo Part 2 steps 3 and 4 |
 | Wallet shows 0 ETH | The Ganache account was emptied; restart Ganache and `npm run migrate` |
-| Regulator tools still show "Make inspector" after a click | Reload the page: the role list refreshes on load |
 
 ---
 

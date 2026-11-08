@@ -8,7 +8,7 @@ Shared files touched by A are logged in the Decisions Log.
 - **Last completed:** V2-11: v2 run end to end through the UI in Demo mode (land → harvest → check and validate → split → sale at the cap → release) and docs. **All v2 tasks done**
 - **Next task:** none. Demo script: `DEMO.md` at the repo root
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** minor UI: after "Make inspector" the Regulator tools list keeps the old button label until the page is reloaded (the transaction itself works). Work for v2 is on branch `farmy-v2`
+- **Open problems:** none. (Fixed in V2-12: the Regulator tools list refreshes right after "Make inspector".) Work for v2 is on branch `farmy-v2`
 
 ## Tasks
 
@@ -69,6 +69,7 @@ Shared files touched by A are logged in the Decisions Log.
 Run it with `npm run test:gas`.
 
 ## Decisions Log
+- 2026-11-08 | V2 commits' Co-Authored-By trailers name the model that did each task (Sonnet/Haiku/Opus 5.5) instead of the plan's single Opus line | Accepted; history not rewritten
 - 2026-11-08 | **IBatchRegistry v2 frozen**: adds `isActive` (false for split lots); escrow refuses closed lots with `NotActive` | Teacher review: splittable lots
 - 2026-11-03 | solc pinned to 0.8.24 with `evmVersion: "paris"` + optimizer (shared `truffle-config.js`) | Ganache 7 rejects push0/mcopy
 - 2026-11-03 | OpenZeppelin pinned to 5.0.2 | 5.1+ uses `mcopy`, which doesn't compile for paris

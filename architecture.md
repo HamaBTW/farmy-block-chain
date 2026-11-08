@@ -182,8 +182,8 @@ it is for sale, the sale can't complete and the buyer can refund.
 **FarmCoin: capped and backed by ETH.** `FarmCoin(maxSupply)` is an `ERC20Capped` with `RATE = 1000`; the
 migration deploys it with a cap of 1,000,000 FRM. There is no owner and no free mint:
 - `buy()` is payable: `msg.value × 1000` FRM are minted to the buyer (1 ETH = 1000 FRM).
-- `sell(amount)` is `nonReentrant`: burns `amount` FRM and sends `amount / 1000` ETH back.
-- `reserve()` returns the ETH held. **Invariant: `reserve() == totalSupply() / RATE`**, so every FRM is backed.
+- `sell(amount)` is `nonReentrant`: burns `(amount / 1000) × 1000` base units (any remainder stays with you) and sends `amount / 1000` ETH back.
+- `reserve()` returns the ETH held. **Invariant: reserve ≥ supply / 1000 (equal unless ETH is forced in)**, so every FRM is backed.
 
 **Web app.** Farm page with Land / Machines / Lots tabs, a "Register land or machine" form (regulator),
 Harvest, Split, Check and validate and Hand over in the Next step card, a family tree on each asset page, and

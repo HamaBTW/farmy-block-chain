@@ -26,7 +26,7 @@ export function sortStamps(items: StampItem[]): StampItem[] {
 
 /** The journey as a column of ink stamps. A stamp that appeared after the page loaded lands with one small thunk. */
 export function StampList({ items, fresh }: { items: StampItem[]; fresh: Set<string> }) {
-  if (items.length === 0) return <p className="text-sm text-ink-soft">Nothing has happened to this batch yet.</p>;
+  if (items.length === 0) return <p className="text-sm text-ink-soft">Nothing has happened to this asset yet.</p>;
   return (
     <ol className="relative space-y-5 before:absolute before:bottom-2 before:left-[19px] before:top-2 before:w-px before:bg-line">
       {items.map((s) => (

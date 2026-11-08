@@ -15,6 +15,8 @@ type PeopleState = {
   chainRoles: ChainRoles;
   rename: (address: string, name: string) => void;
   reset: () => void;
+  /** Re-read the on-chain roles now (after making or removing an inspector, linking the escrow). */
+  refreshRoles: () => void;
 };
 
 const PeopleContext = createContext<PeopleState | null>(null);
@@ -26,7 +28,7 @@ export function PeopleProvider({ children }: { children: React.ReactNode }) {
   // Read once on the client. The first render has no accounts yet, so server and client markup still match.
   const [renames, setRenames] = useState<Record<string, string>>(() => (typeof window === "undefined" ? {} : readRenames()));
   const [chainRoles, setChainRoles] = useState<ChainRoles>({ regulator: null, authority: null, inspectors: [] });
-  const { version } = useChainVersion();
+  const { version, reload: refreshRoles } = useChainVersion();
 
   useEffect(() => {
     getReadProvider()
@@ -70,7 +72,7 @@ export function PeopleProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const people = useMemo(() => buildPeople(accounts, renames), [accounts, renames]);
-  const value = useMemo(() => ({ people, loaded, chainRoles, rename, reset }), [people, loaded, chainRoles, rename, reset]);
+  const value = useMemo(() => ({ people, loaded, chainRoles, rename, reset, refreshRoles }), [people, loaded, chainRoles, rename, reset, refreshRoles]);
   return <PeopleContext.Provider value={value}>{children}</PeopleContext.Provider>;
 }
 

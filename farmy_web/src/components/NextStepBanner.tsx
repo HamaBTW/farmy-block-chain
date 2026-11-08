@@ -44,7 +44,7 @@ export function NextStepBanner() {
           {label(mine.b)}: your turn to {STEP_PHRASES[mine.step.action]}.
         </span>
         <Link href={`/batch/${mine.b.batchId}`} className="inline-flex h-9 items-center rounded-xl bg-field px-3 text-sm font-semibold text-field-ink">
-          Open batch
+          Open
         </Link>
       </Banner>
     );

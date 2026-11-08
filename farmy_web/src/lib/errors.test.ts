@@ -40,3 +40,11 @@ test("v2 errors have plain sentences", () => {
   );
   assert.equal(friendlyError({ name: "BadSplit", args: [] }), "Split into 2 to 10 parts that add up to the lot's quantity.");
 });
+
+test("asset wording, not batch wording", () => {
+  assert.equal(friendlyError({ name: "ERC721NonexistentToken", args: [BigInt(7)] }), "Asset #7 doesn't exist.");
+  assert.equal(friendlyError({ name: "UnknownBatch", args: [BigInt(7)] }), "Asset #7 doesn't exist.");
+  assert.equal(friendlyError({ name: "BatchAlreadyListed", args: [BigInt(1)] }), "This asset is already listed (sale #1). Cancel that listing first.");
+  assert.equal(friendlyError({ name: "NotValidated", args: [] }), "It isn't validated yet. An inspector has to check and validate it first.");
+  assert.equal(friendlyError({ name: "ERC721IncorrectOwner", args: [] }), "Only the person holding it can hand it over.");
+});

@@ -20,7 +20,7 @@ export const ROLE_JOBS: Record<PersonRole, string> = {
   transporter: "Carries lots between places.",
   warehouse: "Stores lots, splits them and sells them on the market.",
   buyer: "Buys FRM with ETH, pays into escrow and receives the goods.",
-  retailer: "Can buy and resell batches.",
+  retailer: "Can buy and resell lots.",
   guest: "A spare account for experiments.",
 };
 

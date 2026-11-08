@@ -13,8 +13,10 @@ export function SplitForm({ lot, onDone }: { lot: BatchView; onDone: () => void 
   const half = lot.quantity / BigInt(2);
   const [parts, setParts] = useState<string[]>(() => [half.toString(), (lot.quantity - half).toString()]);
   const nums = parts.map((p) => (/^\d+$/.test(p.trim()) ? BigInt(p.trim()) : BigInt(0)));
-  const problem = checkSplit(lot.quantity, nums);
-  const prices = problem ? [] : splitPrices(lot.lastPrice, nums);
+  const sizeProblem = checkSplit(lot.quantity, nums);
+  const prices = sizeProblem ? [] : splitPrices(lot.lastPrice, nums);
+  // The contract rejects a free part (ZeroPrice), so catch it before signing.
+  const problem = sizeProblem ?? (prices.some((p) => p === BigInt(0)) ? "One part would cost 0 FRM. Make the parts bigger." : null);
 
   return (
     <div className="space-y-3">

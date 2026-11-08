@@ -57,14 +57,14 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
   if (loaded && !batch) {
     return (
       <Card>
-        <h1 className="font-display text-2xl font-bold">Batch #{batchId.toString()} doesn&apos;t exist</h1>
+        <h1 className="font-display text-2xl font-bold">Asset #{batchId.toString()} doesn&apos;t exist</h1>
         <Link href="/registry" className="mt-2 inline-block font-semibold text-sky underline">
-          See all batches
+          Back to the farm
         </Link>
       </Card>
     );
   }
-  if (!batch) return <p className="text-ink-soft">Loading batch #{batchId.toString()}…</p>;
+  if (!batch) return <p className="text-ink-soft">Loading #{batchId.toString()}…</p>;
 
   // docVersion: re-render after a successful "Verify a file" so the tag reads the stored details.
   const hasDoc = docVersion >= 0 && !!assetDocOf(batch.uri);
@@ -72,7 +72,7 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
   return (
     <div className="space-y-6">
       <Link href="/registry" className="text-sm font-semibold text-ink-soft hover:text-ink">
-        ← All batches
+        ← Farm
       </Link>
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-5">
@@ -109,7 +109,7 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
       <h2 className="font-display text-xl font-bold">Next step</h2>
       {batch.closed && <p className="text-sm text-ink-soft">This lot was split into smaller lots. Each one has its own journey: see the family tree.</p>}
       {!account || !isOnGanache ? (
-        <p className="text-sm text-ink-soft">Choose who you are in the top right corner to act on this batch.</p>
+        <p className="text-sm text-ink-soft">Choose who you are in the top right corner to act on this asset.</p>
       ) : (
         <>
           {waitingFor && (
@@ -137,7 +137,7 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
             <RegistryStep key={s.action} step={s} batch={batch} onDone={onDone} />
           ))}
           {!saleFirst && salePanel({ batch, steps: saleSteps, me: account, onDone })}
-          {mine.length === 0 && !waitingFor && <p className="text-sm text-ink-soft">Nothing for you to do on this batch right now.</p>}
+          {mine.length === 0 && !waitingFor && <p className="text-sm text-ink-soft">Nothing for you to do on this asset right now.</p>}
         </>
       )}
     </Card>
@@ -242,8 +242,8 @@ function DetailsActions({ uri, hasDoc, batchId, onVerified }: { uri: string; has
           }
         }}
       />
-      {result === "match" && <Chip tone="field">Matches the batch</Chip>}
-      {result === "nomatch" && <Chip tone="beet">Doesn&apos;t match this batch</Chip>}
+      {result === "match" && <Chip tone="field">Matches the asset</Chip>}
+      {result === "nomatch" && <Chip tone="beet">Doesn&apos;t match this asset</Chip>}
     </label>
   );
 }
