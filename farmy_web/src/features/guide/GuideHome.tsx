@@ -13,16 +13,18 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 
 type StoryStep = { role: PersonRole; text: string; where: { href: string; label: string } };
 
-/** farmy_idea1.md §7, plus the one-time setup the regulator does first. */
+/** The v2 demo story (spec §3), plus the one-time setup the regulator does first. */
 const STORY: StoryStep[] = [
-  { role: "regulator", text: "Make the Inspector an inspector (Regulator tools), then mint 1000 FRM for the Buyer (Market authority tools).", where: { href: "/registry", label: "Batches" } },
-  { role: "farmer", text: "Add a batch of tomatoes with a first price of 100 FRM.", where: { href: "/registry", label: "Batches" } },
-  { role: "farmer", text: "Open the batch and hand it over to the Transporter.", where: { href: "/registry", label: "Batches" } },
-  { role: "inspector", text: "Open the batch, add a checkpoint (weight, temperature, place), then validate it.", where: { href: "/registry", label: "Batches" } },
-  { role: "transporter", text: "Hand the batch to the Warehouse.", where: { href: "/registry", label: "Batches" } },
-  { role: "warehouse", text: "List it for 150 FRM: the escrow refuses, because the cap is 120 FRM (100 + 20%). Then list it for 115 FRM.", where: { href: "/registry", label: "Batches" } },
-  { role: "buyer", text: "Buy it: one click approves and pays 115 FRM into escrow.", where: { href: "/market", label: "Market" } },
-  { role: "warehouse", text: "Hand the goods to the Buyer. Anyone can now release the payment, and 115 FRM becomes the new last price.", where: { href: "/market", label: "Market" } },
+  { role: "regulator", text: "Make the Inspector an inspector (Regulator tools), then register the land “Olive grove” in Sfax for the Farmer at 5000 FRM.", where: { href: "/registry", label: "Farm" } },
+  { role: "buyer", text: "Buy 1000 FRM for 1 ETH in the Wallet.", where: { href: "/market", label: "Market" } },
+  { role: "farmer", text: "Open the land and harvest 1000 kg of olives at 1000 FRM.", where: { href: "/registry", label: "Farm" } },
+  { role: "farmer", text: "Open the lot and hand it over to the Transporter.", where: { href: "/registry", label: "Farm" } },
+  { role: "inspector", text: "Open the lot and use Check and validate: weight, temperature and place are recorded, then the lot is validated.", where: { href: "/registry", label: "Farm" } },
+  { role: "transporter", text: "Hand the lot to the Warehouse.", where: { href: "/registry", label: "Farm" } },
+  { role: "warehouse", text: "Split the lot into 600 kg and 400 kg. Each part gets its share of the price: 600 and 400 FRM.", where: { href: "/registry", label: "Farm" } },
+  { role: "warehouse", text: "List the 600 kg lot for 800 FRM: the escrow refuses, because the cap is 720 FRM (600 + 20%). Then list it for 700 FRM.", where: { href: "/registry", label: "Farm" } },
+  { role: "buyer", text: "Buy it: one click approves and pays 700 FRM into escrow.", where: { href: "/market", label: "Market" } },
+  { role: "warehouse", text: "Hand the goods to the Buyer. Anyone can now release the payment, and 700 FRM becomes the lot's new last price.", where: { href: "/market", label: "Market" } },
 ];
 
 const SECTIONS = [
@@ -187,6 +189,22 @@ function Rules() {
           <li>The payment is released only when an inspector has validated the batch and the buyer holds the goods.</li>
           <li>The seller can cancel a sale and refund the buyer at any time before release.</li>
           <li>The buyer can take the money back only while those two conditions aren&apos;t both met. Sellers should hand goods over after validation.</li>
+        </ul>
+      </Card>
+      <Card className="space-y-2">
+        <p className="font-semibold">FarmCoin is backed by ETH</p>
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          <li>1 ETH buys 1000 FRM, and 1000 FRM sells back for 1 ETH, at any time.</li>
+          <li>The FarmCoin contract holds the ETH, so every FRM in circulation is backed.</li>
+          <li>At most 1,000,000 FRM can ever exist. Nobody can create FRM for free.</li>
+        </ul>
+      </Card>
+      <Card className="space-y-2">
+        <p className="font-semibold">Land, machines and lots</p>
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          <li>Land and machines are registered by the regulator. Lots of produce are harvested from land, so every lot traces back to its parcel.</li>
+          <li>A lot can be split into 2 to 10 smaller lots that go to different places. The price is shared in proportion and the validation carries over.</li>
+          <li>A split lot is closed: it keeps its history but can&apos;t move or be sold.</li>
         </ul>
       </Card>
     </Section>

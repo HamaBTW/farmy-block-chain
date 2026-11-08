@@ -37,15 +37,15 @@ export function HomeScreen() {
         <div>
           <h1 className="font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl">From farm to buyer, at a fair price.</h1>
           <p className="mt-4 max-w-prose text-lg text-ink-soft">
-            Each batch of produce gets a tag. Every hand-over and inspection stamps it, and when it sells, the price can only rise by a fixed
-            markup. The buyer&apos;s money waits in escrow until the goods arrive.
+            Land and machines are NFTs. Every lot of produce is harvested from a land parcel and can be split so parts go to different places. Each
+            hand-over and inspection stamps it, the price can only rise by a fixed markup, and the buyer&apos;s money waits in escrow until the goods arrive.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/guide" className="inline-flex h-10 items-center rounded-xl bg-field px-4 text-sm font-semibold text-field-ink">
               How it works
             </Link>
             <Link href="/registry" className="inline-flex h-10 items-center rounded-xl border border-line bg-card px-4 text-sm font-semibold">
-              See the batches
+              See the farm
             </Link>
           </div>
         </div>

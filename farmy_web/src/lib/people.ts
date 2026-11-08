@@ -14,12 +14,12 @@ const CAST: { name: string; emoji: string; role: PersonRole }[] = [
 
 /** What each role does, in plain words (People page and guide). */
 export const ROLE_JOBS: Record<PersonRole, string> = {
-  regulator: "Adds inspectors and is also the market authority that mints FRM and sets the max markup.",
-  inspector: "Checks batches on the way and validates them.",
-  farmer: "Adds new batches with their first price.",
-  transporter: "Carries batches between places.",
-  warehouse: "Stores batches and sells them on the market.",
-  buyer: "Pays into escrow and receives the goods.",
+  regulator: "Adds inspectors, registers land and machines, and, as market authority, sets the max markup.",
+  inspector: "Checks land, machines and lots on the way, and validates them.",
+  farmer: "Holds the land and harvests lots of produce from it.",
+  transporter: "Carries lots between places.",
+  warehouse: "Stores lots, splits them and sells them on the market.",
+  buyer: "Buys FRM with ETH, pays into escrow and receives the goods.",
   retailer: "Can buy and resell batches.",
   guest: "A spare account for experiments.",
 };
