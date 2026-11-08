@@ -1,5 +1,15 @@
 export type OpenSale = { id: bigint; seller: string; buyer: string; price: bigint; state: "Created" | "Deposited" };
-export type JourneyState = { batchId: bigint; custodian: string; validated: boolean; lastPrice: bigint; sale: OpenSale | null };
+export type AssetKind = "land" | "machine" | "lot";
+export type JourneyState = {
+  batchId: bigint;
+  kind: AssetKind;
+  /** True once a lot was split; it has no next steps. */
+  closed: boolean;
+  custodian: string;
+  validated: boolean;
+  lastPrice: bigint;
+  sale: OpenSale | null;
+};
 export type Who = { kind: "address"; address: string } | { kind: "inspector" } | { kind: "anyone" } | { kind: "notSeller"; seller: string };
 export type StepAction =
   | "addCheckpoint"
@@ -12,7 +22,9 @@ export type StepAction =
   | "handToBuyer"
   | "release"
   | "refundBuyer"
-  | "refundMe";
+  | "refundMe"
+  | "harvest"
+  | "split";
 export type Step = { action: StepAction; who: Who; primary: boolean };
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
@@ -24,13 +36,17 @@ const step = (action: StepAction, who: Who, primary = false): Step => ({ action,
  * The contracts still enforce every rule; this only decides what to show.
  */
 export function nextSteps(s: JourneyState): Step[] {
+  if (s.closed) return [];
   const inspect = (primary: boolean) => [step("validate", { kind: "inspector" }, primary), step("addCheckpoint", { kind: "inspector" })];
+  // Land holders harvest; lot holders split once the lot is validated (and not listed).
+  const holderExtras = (): Step[] =>
+    s.kind === "land" ? [step("harvest", by(s.custodian))] : s.kind === "lot" && s.validated ? [step("split", by(s.custodian))] : [];
   const { sale } = s;
 
   if (!sale) {
     return s.validated
-      ? [step("listForSale", by(s.custodian), true), step("handOver", by(s.custodian))]
-      : [...inspect(true), step("handOver", by(s.custodian))];
+      ? [step("listForSale", by(s.custodian), true), ...holderExtras(), step("handOver", by(s.custodian))]
+      : [...inspect(true), ...holderExtras(), step("handOver", by(s.custodian))];
   }
 
   if (sale.state === "Created") {
@@ -66,12 +82,12 @@ export function primaryStep(steps: Step[]): Step | undefined {
 }
 
 /** Steps handled by the registry screens (A); every other step is a market step (B). */
-export const REGISTRY_ACTIONS: StepAction[] = ["validate", "addCheckpoint", "handOver"];
+export const REGISTRY_ACTIONS: StepAction[] = ["validate", "addCheckpoint", "handOver", "harvest", "split"];
 
 /** "Waiting for <who> to <phrase>." */
 export const STEP_PHRASES: Record<StepAction, string> = {
   addCheckpoint: "add a checkpoint",
-  validate: "validate this batch",
+  validate: "check and validate it",
   handOver: "hand it over",
   listForSale: "list it for sale",
   cancelListing: "cancel the listing",
@@ -81,4 +97,6 @@ export const STEP_PHRASES: Record<StepAction, string> = {
   release: "release the payment",
   refundBuyer: "refund the buyer",
   refundMe: "take the money back",
+  harvest: "harvest a lot",
+  split: "split it into smaller lots",
 };

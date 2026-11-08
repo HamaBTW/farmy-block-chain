@@ -12,9 +12,17 @@ export type CheckpointDoc = {
   note: string;
   time: string;
 };
-export type FarmyDoc = BatchDoc | CheckpointDoc;
+/** Land parcel description (registered by the regulator). */
+export type LandDoc = { schema: "farmy.land.v1"; name: string; location: string; areaHa: string };
+/** Machine description (registered by the regulator). */
+export type MachineDoc = { schema: "farmy.machine.v1"; name: string; model: string; year: string };
+/** Anything whose hash can be a token URI. */
+export type AssetDoc = BatchDoc | LandDoc | MachineDoc;
+export type FarmyDoc = AssetDoc | CheckpointDoc;
 
 const KEYS: Record<FarmyDoc["schema"], string[]> = {
+  "farmy.land.v1": ["schema", "name", "location", "areaHa"],
+  "farmy.machine.v1": ["schema", "name", "model", "year"],
   "farmy.batch.v1": ["schema", "product", "origin", "quantity", "unit", "harvestDate"],
   "farmy.checkpoint.v1": ["schema", "batchId", "weightKg", "temperatureC", "location", "note", "time"],
 };
@@ -40,7 +48,7 @@ export function hashDoc(doc: FarmyDoc): string {
   return keccak256(toUtf8Bytes(canonicalJson(doc)));
 }
 
-export function batchUri(doc: BatchDoc): string {
+export function batchUri(doc: AssetDoc): string {
   return URI_PREFIX + hashDoc(doc);
 }
 

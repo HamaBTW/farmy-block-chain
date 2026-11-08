@@ -4,7 +4,7 @@ import { canDo, nextSteps, primaryStep, type JourneyState, type OpenSale } from 
 
 const farmer = "0xf", seller = "0x5e", buyer = "0xb", other = "0x0";
 const one = BigInt(1);
-const base: JourneyState = { batchId: one, custodian: farmer, validated: false, lastPrice: BigInt(100), sale: null };
+const base: JourneyState = { batchId: one, kind: "lot", closed: false, custodian: farmer, validated: false, lastPrice: BigInt(100), sale: null };
 const sale = (state: OpenSale["state"], b = buyer): OpenSale => ({ id: one, seller, buyer: b, price: BigInt(115), state });
 const actions = (s: JourneyState) => nextSteps(s).map((x) => x.action + (x.primary ? "*" : ""));
 
@@ -13,7 +13,7 @@ test("not validated, no sale: inspector validates, holder can hand over", () => 
 });
 
 test("validated, no sale: holder lists for sale", () => {
-  assert.deepEqual(actions({ ...base, validated: true }), ["listForSale*", "handOver"]);
+  assert.deepEqual(actions({ ...base, validated: true }), ["listForSale*", "split", "handOver"]);
 });
 
 test("listed by the holder: others buy, seller cancels", () => {
@@ -60,5 +60,25 @@ test("addresses compare case-insensitively and inspectors are recognized", () =>
 
 test("every action has a phrase", async () => {
   const { STEP_PHRASES } = await import("./journey.ts");
-  assert.equal(Object.keys(STEP_PHRASES).length, 11);
+  assert.equal(Object.keys(STEP_PHRASES).length, 13);
+});
+
+test("land: the holder can harvest; the inspector validates first", () => {
+  const land: JourneyState = { ...base, kind: "land" };
+  assert.deepEqual(actions(land), ["validate*", "addCheckpoint", "harvest", "handOver"]);
+  assert.deepEqual(actions({ ...land, validated: true }), ["listForSale*", "harvest", "handOver"]);
+});
+
+test("machines have no harvest or split", () => {
+  assert.deepEqual(actions({ ...base, kind: "machine", validated: true }), ["listForSale*", "handOver"]);
+});
+
+test("an unvalidated lot can't be split yet; a split (closed) lot has no steps", () => {
+  assert.deepEqual(actions(base), ["validate*", "addCheckpoint", "handOver"]);
+  assert.deepEqual(actions({ ...base, validated: true, closed: true }), []);
+});
+
+test("no split while the lot is listed", () => {
+  const s: JourneyState = { ...base, custodian: seller, validated: true, sale: sale("Created", "0x") };
+  assert.ok(!actions(s).includes("split"));
 });

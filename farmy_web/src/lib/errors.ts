@@ -10,7 +10,7 @@ const MESSAGES: Record<string, (args: readonly unknown[]) => string> = {
   PriceAboveCap: (a) => `This price is above the cap of ${frm(a[1])}. Lower it or ask the market authority to raise the markup.`,
   ZeroPrice: () => "Enter a price above 0.",
   ZeroAddress: () => "Pick a person or enter a valid address.",
-  NotCustodian: () => "Only the person holding this batch can list it.",
+  NotCustodian: () => "Only the person holding it can do that.",
   BatchAlreadyListed: (a) => `This batch is already listed (sale #${a[0]}). Cancel that listing first.`,
   WrongState: (a) => (Number(a[0]) === 0 ? "This sale doesn't exist." : `This sale is already ${STATES[Number(a[0])]}.`),
   SellerCannotBuy: () => "You can't buy your own listing.",
@@ -23,12 +23,20 @@ const MESSAGES: Record<string, (args: readonly unknown[]) => string> = {
   NotEscrow: () => "Only the escrow contract can record sale prices.",
   OwnableUnauthorizedAccount: () => "Only the regulator / market authority can do that.",
   ERC20InsufficientAllowance: () => "The escrow isn't allowed to take your FRM yet. Approve the payment first.",
-  ERC20InsufficientBalance: (a) => `You have ${frm(a[1])} but need ${frm(a[2])}. Ask the market authority to mint more.`,
+  ERC20InsufficientBalance: (a) => `You have ${frm(a[1])} but need ${frm(a[2])}. Buy more FRM with ETH on the Market.`,
   ERC20InvalidReceiver: () => "Pick who receives the FRM.",
   ERC721IncorrectOwner: () => "Only the person holding this batch can hand it over.",
   ERC721NonexistentToken: (a) => `Batch #${a[0]} doesn't exist.`,
   ERC721InvalidReceiver: () => "Pick who receives the batch.",
   UnknownBatch: (a) => `Batch #${a[0]} doesn't exist.`,
+  WrongKind: () => "That doesn't work for this kind of asset.",
+  ZeroQuantity: () => "Enter a quantity above 0.",
+  BadSplit: () => "Split into 2 to 10 parts that add up to the lot's quantity.",
+  LotClosed: () => "This lot was split. Use its smaller lots instead.",
+  NotActive: () => "This lot was split, so it can't be listed. List one of its smaller lots.",
+  ZeroAmount: () => "Enter an amount above 0.",
+  ERC20ExceededCap: (a) => `That would pass FarmCoin's max supply of ${frm(a[1])}.`,
+  EthTransferFailed: () => "The ETH couldn't be sent back to you.",
 };
 
 export function friendlyError({ name, args }: DecodedError): string {
@@ -42,6 +50,7 @@ const SAMPLE_ARGS: Record<string, unknown[]> = {
   BatchAlreadyListed: [BigInt(1)],
   WrongState: [BigInt(3)],
   ERC20InsufficientBalance: ["0x0", BigInt(10) * E18, BigInt(115) * E18],
+  ERC20ExceededCap: [BigInt(1000001) * E18, BigInt(1000000) * E18],
   ERC721NonexistentToken: [BigInt(7)],
   UnknownBatch: [BigInt(7)],
 };

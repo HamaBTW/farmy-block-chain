@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { batchUri, canonicalJson, hashDoc, hashFromUri, parseDoc, productEmoji, type BatchDoc, type CheckpointDoc } from "./metadata.ts";
+import { batchUri, canonicalJson, hashDoc, hashFromUri, parseDoc, productEmoji, type BatchDoc, type CheckpointDoc, type LandDoc, type MachineDoc } from "./metadata.ts";
 
 const doc: BatchDoc = { schema: "farmy.batch.v1", product: "Tomatoes", origin: "Sfax", quantity: "200", unit: "kg", harvestDate: "2026-11-01" };
 
@@ -35,4 +35,13 @@ test("parseDoc accepts our schemas only", () => {
 test("product emoji", () => {
   assert.equal(productEmoji("tomatoes"), "🍅");
   assert.equal(productEmoji("Saffron"), "📦");
+});
+
+test("land and machine docs hash and parse back", () => {
+  const land: LandDoc = { schema: "farmy.land.v1", name: "Olive grove", location: "Sfax", areaHa: "4" };
+  const machine: MachineDoc = { schema: "farmy.machine.v1", name: "Olive harvester", model: "Pellenc 4560", year: "2024" };
+  assert.equal(canonicalJson(land), '{"schema":"farmy.land.v1","name":"Olive grove","location":"Sfax","areaHa":"4"}');
+  assert.deepEqual(parseDoc(canonicalJson(land)), land);
+  assert.deepEqual(parseDoc(canonicalJson(machine)), machine);
+  assert.equal(hashFromUri(batchUri(machine)), hashDoc(machine));
 });
