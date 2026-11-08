@@ -114,7 +114,7 @@ function BuyButton({ saleId, price, me, onDone }: { saleId: bigint; price: bigin
   const tooPoor = balance !== null && balance < price;
   return (
     <div className="space-y-1">
-      {tooPoor && <p className="text-sm text-harvest-ink">You have {formatFrm(balance)}. Ask the market authority to mint more FRM first.</p>}
+      {tooPoor && <p className="text-sm text-harvest-ink">You have {formatFrm(balance)}. Buy more FRM with ETH on the Market first.</p>}
       <TxButton
         label={`Buy for ${formatFrm(price)}`}
         done="Paid into escrow"

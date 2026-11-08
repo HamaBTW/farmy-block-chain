@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Drawer } from "@/components/ui/Drawer";
 import { assetLabel } from "@/lib/assetLabel";
-import { formatFrm } from "@/lib/format";
 import { useBatchViews } from "@/lib/useBatchViews";
 import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { AuthorityPanel } from "./AuthorityPanel";
 import { SalesList } from "./SalesList";
 import { useMarketContracts, useMarketInfo, useSales } from "./useMarket";
+import { WalletCard } from "./WalletCard";
 
 /** Person B: every sale, the acting person's FRM, and the market authority's tools. */
 export function MarketHome() {
@@ -50,11 +50,7 @@ export function MarketHome() {
         {isAuthority && <Button onClick={() => setTools(true)}>Market authority tools</Button>}
       </div>
 
-      {account && isOnGanache && info && (
-        <p className="text-sm">
-          <span className="text-ink-soft">Your balance</span> <b className="tabular">{formatFrm(info.balance)}</b>
-        </p>
-      )}
+      {account && isOnGanache && <WalletCard account={account} version={version} onDone={reload} />}
 
       <Card>
         <h2 className="mb-2 font-display text-xl font-bold">Open sales</h2>
@@ -67,7 +63,7 @@ export function MarketHome() {
       </Card>
 
       <Drawer open={tools} title="Market authority tools" onClose={() => setTools(false)}>
-        {tools && info && <AuthorityPanel markup={info.markup} version={version} onDone={reload} />}
+        {tools && info && <AuthorityPanel markup={info.markup} onDone={reload} />}
       </Drawer>
     </div>
   );
