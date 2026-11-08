@@ -139,4 +139,80 @@ contract("Integration: BatchRegistry + PriceCapEscrow", (accounts) => {
     await batchAtWarehouse({ validate: true });
     await expectRevert(escrow.createSale(1, FRM(110), { from: farmer }), "NotCustodian()");
   });
+
+  describe("v2: land, harvest, split, ETH-backed FRM", () => {
+    /** Land #1 → lot #2 (1000 kg @ 1000 FRM) → checked and validated → at the warehouse. */
+    async function lotAtWarehouse() {
+      await registry.registerAsset(farmer, KIND.Land, "farmy:land-sfax", FRM(5000), { from: regulator });
+      await registry.harvest(1, "farmy:olives", 1000, FRM(1000), { from: farmer });
+      await registry.transferCustody(2, transporter, { from: farmer });
+      await registry.checkAndValidate(2, CHECKPOINT, { from: inspector });
+      await registry.transferCustody(2, warehouse, { from: transporter });
+    }
+
+    it("story: split 600/400, sell the 600 kg lot at 700 (cap 720), price recorded on the child", async () => {
+      await lotAtWarehouse();
+      await registry.splitLot(2, [600, 400], { from: warehouse }); // #3, #4
+      assert.equal((await registry.getLastPrice(3)).toString(), FRM(600));
+      assert.isTrue(await registry.isValidated(3));
+
+      await expectRevert(escrow.createSale(2, FRM(100), { from: warehouse }), "NotActive()");
+      await expectRevert(escrow.createSale(3, FRM(800), { from: warehouse }), "PriceAboveCap(uint256,uint256)");
+      await escrow.createSale(3, FRM(700), { from: warehouse });
+      await coin.approve(escrow.address, FRM(700), { from: buyer });
+      await escrow.deposit(1, { from: buyer });
+      await registry.transferCustody(3, buyer, { from: warehouse });
+      await escrow.releasePayment(1, { from: other });
+
+      assert.equal((await coin.balanceOf(warehouse)).toString(), FRM(700));
+      assert.equal((await registry.getLastPrice(3)).toString(), FRM(700));
+      assert.equal((await registry.getLastPrice(4)).toString(), FRM(400));
+      const info = await registry.assetInfo(3);
+      assert.equal(info.landId.toString(), "1");
+      assert.equal(info.parentId.toString(), "2");
+    });
+
+    it("a lot split while listed can't be delivered, so the buyer gets the FRM back", async () => {
+      await lotAtWarehouse();
+      await escrow.createSale(2, FRM(900), { from: warehouse });
+      await coin.approve(escrow.address, FRM(900), { from: buyer });
+      await escrow.deposit(1, { from: buyer });
+      await registry.splitLot(2, [500, 500], { from: warehouse });
+
+      await expectRevert(registry.transferCustody(2, buyer, { from: warehouse }), "LotClosed()");
+      await expectRevert(escrow.releasePayment(1, { from: other }), "CustodyNotMoved()");
+      await escrow.refund(1, { from: buyer });
+      assert.equal((await coin.balanceOf(buyer)).toString(), FRM(1000));
+    });
+
+    it("land can be inspected and sold under the same cap", async () => {
+      await registry.registerAsset(farmer, KIND.Land, "farmy:land-sfax", FRM(5000), { from: regulator });
+      await registry.checkAndValidate(1, CHECKPOINT, { from: inspector });
+      await buyFrm(coin, buyer, FRM(5000)); // buyer now holds 6000 FRM
+      await expectRevert(escrow.createSale(1, FRM(6001), { from: farmer }), "PriceAboveCap(uint256,uint256)");
+      await escrow.createSale(1, FRM(6000), { from: farmer });
+      await coin.approve(escrow.address, FRM(6000), { from: buyer });
+      await escrow.deposit(1, { from: buyer });
+      await registry.transferCustody(1, buyer, { from: farmer });
+      await escrow.releasePayment(1, { from: other });
+      assert.equal((await registry.getLastPrice(1)).toString(), FRM(6000));
+    });
+
+    it("FRM earned in a sale sells back for ETH and the reserve still backs every FRM", async () => {
+      await lotAtWarehouse();
+      await escrow.createSale(2, FRM(1000), { from: warehouse });
+      await coin.approve(escrow.address, FRM(1000), { from: buyer });
+      await escrow.deposit(1, { from: buyer });
+      await registry.transferCustody(2, buyer, { from: warehouse });
+      await escrow.releasePayment(1, { from: other });
+
+      const before = BigInt(await web3.eth.getBalance(warehouse));
+      const tx = await coin.sell(FRM(300), { from: warehouse });
+      const gas = BigInt(tx.receipt.gasUsed) * BigInt(tx.receipt.effectiveGasPrice);
+      const after = BigInt(await web3.eth.getBalance(warehouse));
+      assert.equal((after - before + gas).toString(), web3.utils.toWei("0.3"));
+      const supply = BigInt(await coin.totalSupply());
+      assert.equal((await coin.reserve()).toString(), (supply / BigInt(1000)).toString());
+    });
+  });
 });
