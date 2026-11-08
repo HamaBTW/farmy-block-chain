@@ -1,6 +1,6 @@
 import type { Contract, EventLog, Log } from "ethers";
 
-export type HistoryKind = "BatchMinted" | "CustodyTransferred" | "CheckpointAdded" | "BatchValidated" | "PriceRecorded";
+export type HistoryKind = "AssetRegistered" | "LotHarvested" | "LotSplit" | "CustodyTransferred" | "CheckpointAdded" | "BatchValidated" | "PriceRecorded";
 
 export type HistoryItem = {
   kind: HistoryKind;
@@ -8,15 +8,32 @@ export type HistoryItem = {
   logIndex: number;
   txHash: string;
   timestamp: number;
+  /** Every event argument as a string, including `batchId`. */
   args: Record<string, string>;
 };
 
-const HISTORY_EVENTS: HistoryKind[] = ["BatchMinted", "CustodyTransferred", "CheckpointAdded", "BatchValidated", "PriceRecorded"];
-
-/** Every registry event for one batch, oldest first. History lives in events, not storage. */
+/** Every registry event about one asset, oldest first: its own events plus harvests from it (land) and splits into/out of it (lots). */
 export async function loadHistory(registry: Contract, id: bigint): Promise<HistoryItem[]> {
-  const perEvent = await Promise.all(HISTORY_EVENTS.map((name) => registry.queryFilter(registry.filters[name](id))));
-  const logs = perEvent.flat() as EventLog[];
+  const f = registry.filters;
+  const filters = [
+    f.AssetRegistered(id),
+    f.LotHarvested(id),
+    f.LotHarvested(null, id),
+    f.LotSplit(id),
+    f.LotSplit(null, id),
+    f.CustodyTransferred(id),
+    f.CheckpointAdded(id),
+    f.BatchValidated(id),
+    f.PriceRecorded(id),
+  ];
+  const perFilter = await Promise.all(filters.map((filter) => registry.queryFilter(filter)));
+  const seen = new Set<string>();
+  const logs = (perFilter.flat() as EventLog[]).filter((l) => {
+    const key = `${l.transactionHash}-${l.index}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   logs.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
 
   const timestamps = new Map<number, number>();
@@ -41,7 +58,7 @@ function argsOf(log: EventLog | Log): Record<string, string> {
   if (!("fragment" in log)) return {};
   const out: Record<string, string> = {};
   log.fragment.inputs.forEach((input, i) => {
-    if (input.name !== "batchId") out[input.name] = String(log.args[i]);
+    out[input.name] = String(log.args[i]);
   });
   return out;
 }

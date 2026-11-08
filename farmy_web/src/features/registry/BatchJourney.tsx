@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { BatchChips, batchDocOf } from "@/components/ui/BatchChips";
+import { BatchChips, assetDocOf } from "@/components/ui/BatchChips";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -44,7 +44,11 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
   const [loadedAt] = useState(() => Math.floor(Date.now() / 1000));
   const [docVersion, setDocVersion] = useState(0);
 
-  const stamps = useMemo(() => sortStamps([...registryStamps(history), ...saleStamps]), [history, saleStamps]);
+  const stamps = useMemo(() => {
+    const doc = batch ? assetDocOf(batch.uri) : null;
+    const unit = doc?.schema === "farmy.batch.v1" ? doc.unit : "units";
+    return sortStamps([...registryStamps(history, batchId, unit), ...saleStamps]);
+  }, [history, saleStamps, batch, batchId]);
   const fresh = useMemo(() => new Set(stamps.filter((s) => s.timestamp >= loadedAt).map((s) => s.key)), [stamps, loadedAt]);
 
   if (loaded && !batch) {
@@ -59,8 +63,8 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
   }
   if (!batch) return <p className="text-ink-soft">Loading batch #{batchId.toString()}…</p>;
 
-  // docVersion: re-read the stored details after a successful "Verify a file".
-  const doc = docVersion >= 0 ? batchDocOf(batch.uri) : null;
+  // docVersion: re-render after a successful "Verify a file" so the tag reads the stored details.
+  const hasDoc = docVersion >= 0 && !!assetDocOf(batch.uri);
 
   return (
     <div className="space-y-6">
@@ -69,8 +73,8 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
       </Link>
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-5">
-          <Tag size="lg" batchId={batch.batchId} doc={doc} price={batch.lastPrice} holder={batch.custodian} chips={<BatchChips batch={batch} />} />
-          <DetailsActions uri={batch.uri} hasDoc={!!doc} batchId={batch.batchId} onVerified={() => setDocVersion((v) => v + 1)} />
+          <Tag size="lg" batch={batch} chips={<BatchChips batch={batch} />} />
+          <DetailsActions uri={batch.uri} hasDoc={hasDoc} batchId={batch.batchId} onVerified={() => setDocVersion((v) => v + 1)} />
           <NextStep batch={batch} onDone={reload} salePanel={salePanel} />
         </div>
         <Card className="lg:col-span-7">
@@ -108,7 +112,7 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
               {waitingFor.who.kind === "inspector" && !target ? (
                 <p>
                   No one is an inspector yet. {regulator ? `${regulator.emoji} ${regulator.name}` : "The regulator"} can make someone an inspector in
-                  Batches → Regulator tools.
+                  Farm → Regulator tools.
                 </p>
               ) : (
                 <p>
@@ -213,16 +217,36 @@ function DetailsActions({ uri, hasDoc, batchId, onVerified }: { uri: string; has
   );
 }
 
-/** Registry events as stamps. The mint's PriceRecorded is folded into the "added" stamp. */
-function registryStamps(history: HistoryItem[]): StampItem[] {
-  const mintTx = new Set(history.filter((h) => h.kind === "BatchMinted").map((h) => h.txHash));
-  const mintPrice = new Map(history.filter((h) => h.kind === "PriceRecorded" && mintTx.has(h.txHash)).map((h) => [h.txHash, h.args.price]));
+/** Registry events as stamps. A token's first PriceRecorded is folded into its creation stamp. */
+function registryStamps(history: HistoryItem[], id: bigint, unit: string): StampItem[] {
+  const self = id.toString();
+  const createdTx = new Set(history.filter((h) => h.kind === "AssetRegistered" && h.args.batchId === self).map((h) => h.txHash));
+  const coveredTx = new Set(
+    history.filter((h) => (h.kind === "LotHarvested" && h.args.batchId === self) || (h.kind === "LotSplit" && h.args.childId === self)).map((h) => h.txHash),
+  );
+  const firstPrice = new Map(history.filter((h) => h.kind === "PriceRecorded" && createdTx.has(h.txHash)).map((h) => [h.txHash, h.args.price]));
+  const withPrice = (tx: string, text: string) => (firstPrice.has(tx) ? `${text} · first price ${formatFrm(firstPrice.get(tx)!)}` : text);
+  const lotLink = (lot: string) => (
+    <Link href={`/batch/${lot}`} className="underline">
+      lot #{lot}
+    </Link>
+  );
 
   return history.flatMap((h): StampItem[] => {
     const base = { key: `r-${h.blockNumber}-${h.logIndex}`, blockNumber: h.blockNumber, logIndex: h.logIndex, timestamp: h.timestamp };
     switch (h.kind) {
-      case "BatchMinted":
-        return [{ ...base, emoji: "🌱", tone: "field", title: <>Added by <PersonName address={h.args.farmer} showAddress={false} /></>, detail: mintPrice.has(h.txHash) ? `First price ${formatFrm(mintPrice.get(h.txHash)!)}` : undefined }];
+      case "AssetRegistered":
+        return coveredTx.has(h.txHash)
+          ? []
+          : [{ ...base, emoji: "🌱", tone: "field", title: <>Registered to <PersonName address={h.args.to} showAddress={false} /></>, detail: withPrice(h.txHash, "On the farm") }];
+      case "LotHarvested":
+        return h.args.batchId === self
+          ? [{ ...base, emoji: "🌾", tone: "field", title: <>Harvested from <Link href={`/batch/${h.args.landId}`} className="underline">land #{h.args.landId}</Link></>, detail: withPrice(h.txHash, `${h.args.quantity} ${unit}`) }]
+          : [{ ...base, emoji: "🌾", tone: "field", title: <>Harvested {lotLink(h.args.batchId)}</>, detail: `${h.args.quantity} units` }];
+      case "LotSplit":
+        return h.args.childId === self
+          ? [{ ...base, emoji: "✂️", tone: "sky", title: <>Split from {lotLink(h.args.batchId)}</>, detail: withPrice(h.txHash, `${h.args.quantity} ${unit}`) }]
+          : [{ ...base, emoji: "✂️", tone: "sky", title: <>Split off {lotLink(h.args.childId)}</>, detail: `${h.args.quantity} ${unit}` }];
       case "CustodyTransferred":
         return [{ ...base, emoji: "🤝", tone: "sky", title: <>Handed to <PersonName address={h.args.to} showAddress={false} /></>, detail: <>from <PersonName address={h.args.from} showAddress={false} /></> }];
       case "CheckpointAdded":
@@ -230,7 +254,7 @@ function registryStamps(history: HistoryItem[]): StampItem[] {
       case "BatchValidated":
         return [{ ...base, emoji: "✅", tone: "field", title: <>Validated by <PersonName address={h.args.inspector} showAddress={false} /></> }];
       case "PriceRecorded":
-        return mintTx.has(h.txHash) ? [] : [{ ...base, emoji: "📈", tone: "field", title: `New last price ${formatFrm(h.args.price)}` }];
+        return createdTx.has(h.txHash) ? [] : [{ ...base, emoji: "📈", tone: "field", title: `New last price ${formatFrm(h.args.price)}` }];
     }
   });
 }

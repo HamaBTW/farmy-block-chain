@@ -42,8 +42,8 @@ export function SetupCard() {
   const checks = [
     { ok: typeof block === "number", label: `Ganache at ${GANACHE.rpcUrl}`, fix: "Start Ganache (network 5777, chain 1337)." },
     ...CONTRACTS.map((c) => ({ ok: !!getDeployment(c.name), label: `${c.label} deployed`, fix: "Run `npm run migrate` in farmy_blockchain." })),
-    { ok: linked === true, label: "Escrow linked to the registry", fix: "The regulator links it in Batches → Regulator tools." },
-    { ok: chainRoles.inspectors.length > 0, label: "At least one inspector", fix: "The regulator adds one in Batches → Regulator tools." },
+    { ok: linked === true, label: "Escrow linked to the registry", fix: "The regulator links it in Farm → Regulator tools." },
+    { ok: chainRoles.inspectors.length > 0, label: "At least one inspector", fix: "The regulator adds one in Farm → Regulator tools." },
     { ok: !!account && isOnGanache, label: mode === "demo" ? "Demo person chosen" : "MetaMask connected to Farmy", fix: "Choose who you are in the top right corner." },
   ];
   const missing = checks.filter((c) => !c.ok);

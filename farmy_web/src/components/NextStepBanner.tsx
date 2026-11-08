@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { assetLabel, KIND_NAMES } from "@/lib/assetLabel";
 import { getContract } from "@/lib/contracts";
 import { canDo, nextSteps, primaryStep, STEP_PHRASES, type Step } from "@/lib/journey";
 import type { BatchView } from "@/lib/journeyData";
-import { productEmoji } from "@/lib/metadata";
 import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
 import { personForWho } from "@/lib/people/resolveWho";
 import { useBatchViews } from "@/lib/useBatchViews";
 import { useChainVersion } from "@/lib/useChainVersion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { batchDocOf } from "./ui/BatchChips";
+import { assetDocOf } from "./ui/BatchChips";
 import { Button } from "./ui/Button";
 
 const HIDDEN_ON = ["/batch/", "/guide"];
@@ -68,8 +68,8 @@ export function NextStepBanner() {
 }
 
 function label(b: BatchView): string {
-  const doc = batchDocOf(b.uri);
-  return doc ? `${productEmoji(doc.product)} ${doc.product} (batch #${b.batchId})` : `Batch #${b.batchId}`;
+  const l = assetLabel(b.kind, assetDocOf(b.uri), b.quantity);
+  return `${l.emoji} ${l.title} (${KIND_NAMES[b.kind].toLowerCase()} #${b.batchId})`;
 }
 
 function Banner({ tone, children }: { tone: "sky" | "beet"; children: React.ReactNode }) {

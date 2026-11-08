@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BatchChips, batchDocOf } from "@/components/ui/BatchChips";
+import { BatchChips, assetDocOf } from "@/components/ui/BatchChips";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { SetupCard } from "@/components/SetupCard";
 import { Tag } from "@/components/ui/Tag";
+import { assetLabel } from "@/lib/assetLabel";
 import { getContract } from "@/lib/contracts";
 import { formatFrm } from "@/lib/format";
 import { canDo, nextSteps, STEP_PHRASES } from "@/lib/journey";
-import { productEmoji } from "@/lib/metadata";
 import { findPerson, ROLE_JOBS } from "@/lib/people";
 import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
 import { useBatchViews } from "@/lib/useBatchViews";
@@ -74,13 +74,13 @@ export function HomeScreen() {
           ) : (
             <ul className="space-y-2">
               {todo.map(({ b, s }) => {
-                const doc = batchDocOf(b.uri);
+                const label = assetLabel(b.kind, assetDocOf(b.uri), b.quantity);
                 return (
                   <li key={`${b.batchId}-${s.action}`}>
                     <Link href={`/batch/${b.batchId}`} className="flex items-center gap-3 rounded-xl border border-line bg-card p-3 hover:bg-field-wash">
-                      <span className="text-2xl" aria-hidden>{doc ? productEmoji(doc.product) : "📦"}</span>
+                      <span className="text-2xl" aria-hidden>{label.emoji}</span>
                       <span>
-                        <span className="font-semibold">{doc ? doc.product : `Batch #${b.batchId}`}</span>
+                        <span className="font-semibold">{label.title} #{b.batchId.toString()}</span>
                         <span className="block text-sm text-ink-soft">Your turn to {STEP_PHRASES[s.action]}</span>
                       </span>
                     </Link>
@@ -92,14 +92,14 @@ export function HomeScreen() {
           <SetupCard />
         </div>
         <div className="space-y-4">
-          <h2 className="font-display text-2xl font-bold">Latest batches</h2>
+          <h2 className="font-display text-2xl font-bold">Latest on the farm</h2>
           {batches.length === 0 ? (
-            <p className="text-ink-soft">No batches yet. Add the first one as 🚜 Farmer from the Batches page.</p>
+            <p className="text-ink-soft">Nothing on the farm yet. The 🏛️ Regulator registers the first land on the Farm page.</p>
           ) : (
             <div className="space-y-4">
               {batches.slice(0, 3).map((b) => (
                 <Link key={b.batchId.toString()} href={`/batch/${b.batchId}`} className="block rounded-lg">
-                  <Tag batchId={b.batchId} doc={batchDocOf(b.uri)} price={b.lastPrice} holder={b.custodian} chips={<BatchChips batch={b} />} />
+                  <Tag batch={b} chips={<BatchChips batch={b} />} />
                 </Link>
               ))}
             </div>

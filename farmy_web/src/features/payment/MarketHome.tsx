@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { batchDocOf } from "@/components/ui/BatchChips";
+import { assetDocOf } from "@/components/ui/BatchChips";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Drawer } from "@/components/ui/Drawer";
+import { assetLabel } from "@/lib/assetLabel";
 import { formatFrm } from "@/lib/format";
 import { useBatchViews } from "@/lib/useBatchViews";
 import { useChainVersion } from "@/lib/useChainVersion";
@@ -23,7 +24,7 @@ export function MarketHome() {
   const { batches } = useBatchViews(version);
   const [tools, setTools] = useState(false);
 
-  const docs = useMemo(() => new Map(batches.map((b) => [b.batchId.toString(), batchDocOf(b.uri)])), [batches]);
+  const labels = useMemo(() => new Map(batches.map((b) => [b.batchId.toString(), assetLabel(b.kind, assetDocOf(b.uri), b.quantity)])), [batches]);
   const open = sales.filter((s) => s.state === "Created" || s.state === "Deposited");
   const finished = sales.filter((s) => s.state === "Released" || s.state === "Refunded");
 
@@ -42,7 +43,7 @@ export function MarketHome() {
         <div className="max-w-prose">
           <h1 className="font-display text-3xl font-bold">Market</h1>
           <p className="mt-1 text-ink-soft">
-            Batches for sale. The buyer&apos;s FRM waits in escrow until the batch is validated and handed over. No sale can go above the last price
+            Land, machines and lots for sale. The buyer&apos;s FRM waits in escrow until the batch is validated and handed over. No sale can go above the last price
             plus {info ? `${info.markup}%` : "the max markup"}.
           </p>
         </div>
@@ -57,12 +58,12 @@ export function MarketHome() {
 
       <Card>
         <h2 className="mb-2 font-display text-xl font-bold">Open sales</h2>
-        {loaded ? <SalesList sales={open} docs={docs} empty="Nothing is for sale right now. A holder lists a validated batch from its page." /> : <p className="text-sm text-ink-soft">Loading…</p>}
+        {loaded ? <SalesList sales={open} labels={labels} empty="Nothing is for sale right now. A holder lists a validated asset from its page." /> : <p className="text-sm text-ink-soft">Loading…</p>}
         {error && <p className="text-sm text-beet">{error}</p>}
       </Card>
       <Card>
         <h2 className="mb-2 font-display text-xl font-bold">Finished</h2>
-        <SalesList sales={finished} docs={docs} empty="No finished sales yet." />
+        <SalesList sales={finished} labels={labels} empty="No finished sales yet." />
       </Card>
 
       <Drawer open={tools} title="Market authority tools" onClose={() => setTools(false)}>
