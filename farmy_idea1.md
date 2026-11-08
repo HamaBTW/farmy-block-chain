@@ -1,5 +1,7 @@
 # Farmy Mini — Chain of Custody + Price-Cap Escrow
 
+> **v2 (2026-11-08, after teacher review):** NFTs are land, machines and lots harvested from land; lots split into child lots; FarmCoin is capped and backed by ETH. See the [v2 spec](docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md).
+
 A mini version of Farmy focused only on blockchain and smart contracts. Two developers, two independent contracts, one NFT and one FT, linked through a clean interface.
 
 ## 1. Goal

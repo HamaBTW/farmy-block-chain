@@ -67,7 +67,7 @@ validation), `custodian` (transfers custody), `escrow` (the only caller of `reco
 
 ### 2.2 FarmCoin + PriceCapEscrow (Person B, ERC-20)
 The source of truth for **money and rules**. It holds no custody or inspection data.
-- `FarmCoin`: plain OpenZeppelin ERC-20 `FRM`, minted by the market authority for the demo.
+- `FarmCoin`: OpenZeppelin ERC-20 `FRM`. v1 had a free `mint` for the demo; v2 replaces it with ETH `buy`/`sell` and a cap (see section 6).
 - `PriceCapEscrow`: holds buyer FRM until delivery. It enforces
   `price <= lastPrice * (100 + maxMarkupPercent) / 100` and has an explicit sale state machine
   (`Created → Deposited → Released | Refunded`).
@@ -88,9 +88,10 @@ BatchRegistry  ──never calls──► PriceCapEscrow
 ### 2.4 Sale lifecycle across both contracts
 
 ```
-Farmer      mintBatch(farmer, uri, 100 FRM)                    → BatchMinted, PriceRecorded(100)
+Regulator   registerAsset(farmer, Land, uri, 5000 FRM)          → AssetRegistered, PriceRecorded
+Farmer      harvest(landId, uri, 1000, 1000 FRM)               → LotHarvested, PriceRecorded(1000)
 Transporter transferCustody → checkpoints by inspector         → CustodyTransferred, CheckpointAdded
-Inspector   validateBatch                                      → BatchValidated
+Inspector   checkAndValidate(id, hash)                         → CheckpointAdded, BatchValidated
 Warehouse   createSale(id, 150)  ✗ reverts (cap = 120 at 20%)
 Warehouse   createSale(id, 115)  ✓                             → SaleCreated
 Buyer       FRM approve + deposit(saleId)                      → Deposited
@@ -150,3 +151,40 @@ cd farmy_web && npm run dev              # predev also runs sync-contracts
 | UI in its own folder (`farmy_web/`) | Keeps the Truffle project contracts-only, and each side has its own `package.json` |
 | ABIs/addresses generated, not committed | Addresses change on every Ganache reset or `migrate --reset` |
 | ethers v6 + plain React context (no wagmi) | One local chain and one wallet; fewer dependencies |
+
+## 6. v2 (2026-11-08, after teacher review)
+
+Spec: [docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md](docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md).
+The contracts keep their names and files; on screen the registry is called **Farm**. Sections 2.1, 2.2 and
+2.4 above describe v1; this section says what v2 changed.
+
+**Three kinds of token.** Every `BatchRegistry` token has a `Kind` (`Land = 0`, `Machine = 1`, `Lot = 2`).
+
+| Kind | Created by | Function |
+|------|-----------|----------|
+| Land | regulator only | `registerAsset(to, Kind.Land, uri, price)` |
+| Machine | regulator only | `registerAsset(to, Kind.Machine, uri, price)` |
+| Lot | the holder of a Land token | `harvest(landId, uri, quantity, price)`; the lot keeps its `landId` |
+
+`mintBatch` and `validateBatch` are gone. The inspector now calls `checkAndValidate(id, dataHash)`, which
+emits `CheckpointAdded` and then `BatchValidated` in one transaction.
+
+**Split rule.** `splitLot(lotId, quantities)` is called by the lot's custodian: 2 to 10 parts, each > 0,
+adding up to the lot's quantity (`BadSplit` otherwise). Each child is a new Lot minted to the caller with
+the same `landId`, `parentId = lotId` and the parent's validation flag. The parent's price is shared **in
+proportion** (`parentPrice × part / quantity`, the last child takes the rounding remainder, so the parts add
+up exactly), and the **parent is closed**: it can no longer be transferred, checked or sold.
+
+**`IBatchRegistry` v2.** The interface (frozen again) gains `isActive(batchId)`, false for a closed (split)
+lot. `PriceCapEscrow.createSale` refuses a closed lot with `NotActive`. If a lot is split while
+it is for sale, the sale can't complete and the buyer can refund.
+
+**FarmCoin: capped and backed by ETH.** `FarmCoin(maxSupply)` is an `ERC20Capped` with `RATE = 1000`; the
+migration deploys it with a cap of 1,000,000 FRM. There is no owner and no free mint:
+- `buy()` is payable: `msg.value × 1000` FRM are minted to the buyer (1 ETH = 1000 FRM).
+- `sell(amount)` is `nonReentrant`: burns `amount` FRM and sends `amount / 1000` ETH back.
+- `reserve()` returns the ETH held. **Invariant: `reserve() == totalSupply() / RATE`**, so every FRM is backed.
+
+**Web app.** Farm page with Land / Machines / Lots tabs, a "Register land or machine" form (regulator),
+Harvest, Split, Check and validate and Hand over in the Next step card, a family tree on each asset page, and
+a Wallet card on Market to buy and sell FRM.

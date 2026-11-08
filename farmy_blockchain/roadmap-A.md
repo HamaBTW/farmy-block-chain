@@ -4,11 +4,11 @@ Owner: **Person A**. Scope: `contracts/registry/`, `test/registry/`, `farmy_web/
 Shared files touched by A are logged in the Decisions Log.
 
 ## Current State
-- **Date:** 2026-11-03
-- **Last completed:** A17 (+B17): idea1 §7 lifecycle run fully through the UI (6 accounts, UI only). **All A tasks done**
+- **Date:** 2026-11-08
+- **Last completed:** V2-11: v2 run end to end through the UI in Demo mode (land → harvest → check and validate → split → sale at the cap → release) and docs. **All v2 tasks done**
 - **Next task:** none. Demo script: `DEMO.md` at the repo root
 - **Branch:** init committed on `main` (b44652a); A works on `person-a` (local only, not pushed)
-- **Open problems:** none
+- **Open problems:** minor UI: after "Make inspector" the Regulator tools list keeps the old button label until the page is reloaded (the transaction itself works). Work for v2 is on branch `farmy-v2`
 
 ## Tasks
 
@@ -43,6 +43,16 @@ Shared files touched by A are logged in the Decisions Log.
 - [x] A16 | Integration tests in `test/integration/` for idea §8 scenarios: happy path, release blocked (not validated), release blocked (custody not moved), unauthorized `recordSalePrice`/validate/checkpoint | Depends on: A11, B's escrow done | Done when: all pass on Ganache (B writes the overpriced-sale and refund scenarios)
 - [x] A17 | End-to-end demo through the UI (with B's market screens) | Depends on: A16 | Done when: section 7 lifecycle of idea1 runs fully from MetaMask
 
+### Phase 7 — v2 (teacher review; spec `docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md`)
+- [x] V2-02 | `BatchRegistry`: kinds (Land, Machine, Lot), `registerAsset`, `harvest`, `checkAndValidate`, closed lots, `isActive`
+- [x] V2-03 | `splitLot` (2–10 parts, proportional price, inherited validation, parent closed)
+- [x] V2-05 | Migrations for v2 and v2 integration story
+- [x] V2-06 | UI data layer: kinds, harvest/split steps, asset labels, split math, v2 errors
+- [x] V2-07 | Farm page with Land / Machines / Lots tabs and register form
+- [x] V2-08 | Asset page: check-and-validate, harvest, split, family tree
+- [x] V2-10 | Guide story, role jobs and home copy for v2
+- [x] V2-11 | End-to-end run on the UI and docs (DEMO, README, architecture, roadmaps)
+
 ## Gas Report (A10, solc 0.8.24, optimizer 200 runs, Ganache)
 
 | Method | Avg gas | Notes |
@@ -59,6 +69,7 @@ Shared files touched by A are logged in the Decisions Log.
 Run it with `npm run test:gas`.
 
 ## Decisions Log
+- 2026-11-08 | **IBatchRegistry v2 frozen**: adds `isActive` (false for split lots); escrow refuses closed lots with `NotActive` | Teacher review: splittable lots
 - 2026-11-03 | solc pinned to 0.8.24 with `evmVersion: "paris"` + optimizer (shared `truffle-config.js`) | Ganache 7 rejects push0/mcopy
 - 2026-11-03 | OpenZeppelin pinned to 5.0.2 | 5.1+ uses `mcopy`, which doesn't compile for paris
 - 2026-11-03 | MetaCoin sample removed; empty folder layout from rules §2 created | Clean start

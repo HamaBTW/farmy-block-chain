@@ -4,9 +4,9 @@ Owner: **Person B**. Scope: `contracts/payment/`, `test/payment/`, `farmy_web/sr
 Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are logged in the Decisions Log.
 
 ## Current State
-- **Date:** 2026-11-03
-- **Last completed:** UI11 (whole-app UI redesign, verified end to end in Demo mode)
-- **Next task:** none. Tell Person A about the redesign (A-owned + shared files below, Demo-mode rule exception); `DEMO.md` still describes the old screens
+- **Date:** 2026-11-08
+- **Last completed:** V2-11: v2 run end to end through the UI in Demo mode and docs. **All v2 tasks done**
+- **Next task:** none. Demo script: `DEMO.md` at the repo root
 - **Branch:** `person-b`, main merged in at 3667ef9 (all A and B tasks); the sync-folder fix (4312a98) is only here until `person-b` is merged to main
 - **Open problems:** none. A confirmed the freeze; A11 is done. B11–B16 done by Person A's agent at the user's request (see Decisions Log)
 - **Test command:** `npx truffle test --network development` (`truffle` is not installed globally, so `npm test` fails on this machine)
@@ -56,6 +56,15 @@ Mocks of A's interface live in `contracts/mocks/`. Shared files touched by B are
 - [x] UI10 | Home, guide, next-step banner, setup card | Depends on: UI09 | Done when: lint + build pass, banner points to the next step
 - [x] UI11 | End-to-end check + docs | Depends on: UI10 | Done when: idea1 §7 runs in Demo mode (150 refused, 115 sold, released, new cap 138, cancel works), 99 contract + 24 UI tests pass
 
+### Phase 7 — v2 (teacher review; spec `docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md`)
+- [x] V2-01 | FarmCoin: max supply, ETH `buy`/`sell`, reserve, no free mint
+- [x] V2-04 | Escrow refuses closed lots (`NotActive`); split-while-listed refund
+- [x] V2-05 | Migrations for v2 and v2 integration story
+- [x] V2-06 | UI data layer: kinds, harvest/split steps, asset labels, split math, v2 errors
+- [x] V2-09 | Market wallet to buy and sell FRM with ETH; free minting removed
+- [x] V2-10 | Guide story, role jobs and home copy for v2
+- [x] V2-11 | End-to-end run on the UI and docs (DEMO, README, architecture, roadmaps)
+
 ## B01 — Review of `IBatchRegistry.sol` (v1 draft, commit 85a6147)
 **Verdict: OK, no changes requested.** Ready to freeze once A confirms.
 - `getLastPrice`, `isValidated`, `custodianOf` cover every escrow check (cap, release conditions, seller check).
@@ -82,6 +91,7 @@ Nothing flagged. `createSale` is the most expensive call: 3 new slots (2 for `Sa
 Coverage: every external function of `FarmCoin` and `PriceCapEscrow` has happy path, revert paths, access rule and event tested (59 tests in the whole suite, 0 warnings).
 
 ## Decisions Log
+- 2026-11-08 | **IBatchRegistry v2 frozen**: adds `isActive` (false for split lots); escrow refuses closed lots with `NotActive` | Teacher review: splittable lots
 - 2026-11-03 | B works on branch `person-b`, from `main` at 14f6d40 | rules §7
 - 2026-11-03 | `FarmCoin` = OZ `ERC20` + `Ownable`, only addition is `mint` (onlyOwner); no cap, no burn | Smallest token that fits idea1 ("minted by the market authority")
 - 2026-11-03 | Market authority = deployer, owner (`Ownable`) of both `FarmCoin` and `PriceCapEscrow` | Same pattern as A's regulator; no AccessControl needed for one role

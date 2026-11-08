@@ -1,6 +1,6 @@
 # Manual Test — Person B (FarmCoin + PriceCapEscrow)
 
-How to check B's work by hand on Ganache. Covers tasks B03–B10 (contracts only).
+How to check B's work by hand on Ganache. Covers tasks B03–B10 (contracts only), updated for v2 (FarmCoin is capped and bought with ETH).
 The deploy script (B11) and the `/market` UI (B12–B15) don't exist yet, so everything here runs in the
 **Truffle console** against `MockBatchRegistry`, a test-only stand-in for A's registry.
 
@@ -18,14 +18,14 @@ Lines marked `// → x` show what the console should print.
 ```bash
 npx truffle test test/payment/FarmCoin.test.js test/payment/MockBatchRegistry.test.js test/payment/PriceCapEscrow.test.js --network development
 ```
-Expected: **49 passing**, 0 failing, no compiler warnings.
+Expected: all passing, 0 failing, no compiler warnings (the whole project has **124 passing** in v2).
 (`Cannot find module '../binaries/uws_win32_x64_127.node'` is a harmless Ganache notice.)
 
 Whole project (A + B):
 ```bash
 npx truffle test --network development
 ```
-Expected: **59 passing**.
+Expected: **124 passing**.
 
 ## 2. Open the console and deploy
 ```bash
@@ -36,11 +36,11 @@ npx truffle console --network development
 ```
 Paste these lines one by one into the console (each is one line on purpose).
 
-Accounts: `authority` = market authority (owner), `seller` = warehouse, `buyer`, `other` = a stranger.
+Accounts: `authority` = market authority (owner of the escrow; FarmCoin has no owner in v2), `seller` = warehouse, `buyer`, `other` = a stranger.
 ```js
 let [authority, seller, buyer, other] = await web3.eth.getAccounts()
 let registry = await MockBatchRegistry.new()
-let coin = await FarmCoin.new({ from: authority })
+let coin = await FarmCoin.new(web3.utils.toWei("1000000"), { from: authority })
 let escrow = await PriceCapEscrow.new(registry.address, coin.address, 20, { from: authority })
 await registry.setEscrow(escrow.address)
 ```
@@ -51,7 +51,7 @@ let frm = (n) => web3.utils.toWei(String(n), "ether")
 let bal = async (a) => web3.utils.fromWei(await coin.balanceOf(a), "ether")
 let STATES = ["None", "Created", "Deposited", "Released", "Refunded"]
 let state = async (id) => STATES[(await escrow.getSale(id)).state]
-let ERRORS = ["ZeroAddress()", "ZeroPrice()", "NotCustodian()", "PriceAboveCap(uint256,uint256)", "BatchAlreadyListed(uint256)", "WrongState(uint8)", "SellerCannotBuy()", "NotValidated()", "CustodyNotMoved()", "NotAllowed()", "ReleaseConditionsMet()", "NotEscrow()", "UnknownBatch(uint256)", "OwnableUnauthorizedAccount(address)", "ERC20InvalidReceiver(address)", "ERC20InsufficientAllowance(address,uint256,uint256)", "ERC20InsufficientBalance(address,uint256,uint256)"]
+let ERRORS = ["ZeroAmount()", "NotActive()", "ZeroAddress()", "ZeroPrice()", "NotCustodian()", "PriceAboveCap(uint256,uint256)", "BatchAlreadyListed(uint256)", "WrongState(uint8)", "SellerCannotBuy()", "NotValidated()", "CustodyNotMoved()", "NotAllowed()", "ReleaseConditionsMet()", "NotEscrow()", "UnknownBatch(uint256)", "OwnableUnauthorizedAccount(address)", "ERC20InvalidReceiver(address)", "ERC20InsufficientAllowance(address,uint256,uint256)", "ERC20InsufficientBalance(address,uint256,uint256)"]
 let why = async (p) => { try { await p; return "OK (no revert)" } catch (e) { const d = e.data?.result ?? e.data; const s = typeof d === "string" ? d.slice(0, 10) : ""; return ERRORS.find((x) => web3.eth.abi.encodeFunctionSignature(x) === s) ?? e.message } }
 ```
 `why(...)` exists because Truffle prints custom errors as "could not decode"; it returns the error name instead.
@@ -60,17 +60,19 @@ If you paste a `let` line twice the console says "already declared". Close it (`
 
 ## 3. Scenarios
 
-### S1 — FarmCoin (B03)
+### S1 — FarmCoin: capped, bought with ETH (B03)
+FRM only comes from `buy` (1 ETH = 1000 FRM). There is no `mint`.
 ```js
 await coin.name()                                             // → 'FarmCoin'
 await coin.symbol()                                           // → 'FRM'
 (await coin.decimals()).toString()                            // → '18'
-await coin.owner() === authority                              // → true
-await why(coin.mint(other, frm(1), { from: other }))          // → 'OwnableUnauthorizedAccount(address)'
-await why(coin.mint("0x0000000000000000000000000000000000000000", frm(1), { from: authority }))   // → 'ERC20InvalidReceiver(address)'
-await coin.mint(buyer, frm(500), { from: authority })
+(await coin.RATE()).toString()                                // → '1000'
+web3.utils.fromWei(await coin.cap(), "ether")                 // → '1000000'
+await why(coin.buy({ from: buyer, value: 0 }))                // → 'ZeroAmount()'
+await coin.buy({ from: buyer, value: web3.utils.toWei("0.5") })
 await bal(buyer)                                              // → '500'
 ```
+(1 ETH gives 1000 FRM. These scenarios use 0.5 ETH, which gives 500 FRM, so the balances below stay the same.)
 
 ### S2 — Max markup (B05)
 ```js
@@ -192,13 +194,26 @@ This checks the mock. The same rule in A's real `BatchRegistry` is tested in A16
 (await escrow.getPastEvents("MarkupChanged", { fromBlock: 0 })).length     // → 3
 ```
 
+### S10 — Buy, sell back, reserve (FarmCoin v2)
+A fresh coin, so the numbers are easy to follow.
+```js
+let coin2 = await FarmCoin.new(web3.utils.toWei("1000000"), { from: authority })
+await coin2.buy({ from: other, value: web3.utils.toWei("1") })
+web3.utils.fromWei(await coin2.balanceOf(other), "ether")     // → '1000'
+await coin2.sell(web3.utils.toWei("400"), { from: other })
+web3.utils.fromWei(await coin2.balanceOf(other), "ether")     // → '600'
+web3.utils.fromWei(await coin2.reserve(), "ether")            // → '0.6'
+web3.utils.fromWei(await coin2.totalSupply(), "ether")        // → '600'
+```
+The reserve is always the supply divided by 1000 (600 FRM → 0.6 ETH).
+
 Leave the console with `.exit`.
 
 ## 4. Checklist
 | # | What | Pass? |
 |---|------|-------|
-| 1 | `npx truffle test` (payment files) shows 49 passing | ☐ |
-| S1 | FarmCoin: name/symbol/decimals, only the authority mints | ☐ |
+| 1 | `npx truffle test` (payment files) all passing | ☐ |
+| S1 | FarmCoin: name/symbol/decimals/rate/cap, FRM only through `buy` | ☐ |
 | S2 | Only the authority changes the markup | ☐ |
 | S3 | 150 rejected, 115 accepted, non-custodian/zero/unknown/second listing rejected | ☐ |
 | S4 | Deposit locks FRM; release blocked (not validated, custody not moved); release pays seller and records 115 | ☐ |
@@ -207,10 +222,11 @@ Leave the console with `.exit`.
 | S7 | Unpaid listing cancelled by seller, stale listing cleared by anyone | ☐ |
 | S8 | Stranger can't call `recordSalePrice` | ☐ |
 | S9 | Events recorded | ☐ |
+| S10 | Buy 1 ETH, sell 400 FRM, reserve = 0.6 ETH | ☐ |
 
 ## 5. In the web app
 Everything above can now also be done by clicking, without the console:
 - `npm run migrate` here, then `npm run dev` in `farmy_web/` and open http://localhost:3000.
 - The app starts in **Demo mode** (no MetaMask): pick a person in the top-right menu.
-- Follow **Guide → The story** (`/guide#story`): it covers S3–S7 (cap rejection at 150, sale at 115, release, refunds) through the batch pages.
+- Follow **Guide → The story** (`/guide#story`): it covers the cap rejection, the sale, release and refunds through the asset pages, and **Market → Wallet** covers S1 and S10.
 - Contract errors appear as plain sentences under the buttons; **Guide → What errors mean** lists them all.

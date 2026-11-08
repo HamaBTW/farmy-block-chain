@@ -1,6 +1,6 @@
 # Farmy Mini
 
-Chain of custody for agricultural batches (NFT) plus a price-cap escrow (FT), on a local Ganache chain.
+Chain of custody for farm assets (land, machine and lot NFTs, lots splittable) plus a price-cap escrow paid in ETH-backed FarmCoin (FRM), on a local Ganache chain.
 All assets are **simulated**. There are no real goods or payments.
 
 | Doc | What |
@@ -20,7 +20,7 @@ All assets are **simulated**. There are no real goods or payments.
 Prerequisites: Node 22, Truffle 5.11, Ganache GUI on `127.0.0.1:7545` (network 5777, chain 1337), MetaMask.
 
 ```bash
-cd farmy_blockchain && npm install && npm test   # contract tests on Ganache
+cd farmy_blockchain && npm install && npx truffle test --network development   # contract tests on Ganache
 npm run migrate                                  # deploy + sync ABIs into farmy_web
 cd ../farmy_web && npm install && npm run dev    # http://localhost:3000
 ```
@@ -58,11 +58,13 @@ No MetaMask needed for a demo: the app starts in **Demo mode** (act as any Ganac
 | B12–B15 | ✅ | UI `/market`: balance, authority panel, sales, cap pre-check, buy, release, refund * |
 | B16–B17 | ✅ | Integration tests + end-to-end demo * |
 | UI01–UI11 | ✅ | Whole-app redesign: demo people, Demo mode, batch journey, generated metadata, guide ([spec](docs/superpowers/specs/2026-11-03-farmy-ui-redesign-design.md)) |
+| V2-01–V2-11 | ✅ | v2 after teacher review: land/machine/lot NFTs, split lots, check-and-validate, ETH-backed capped FarmCoin ([spec](docs/superpowers/specs/2026-11-08-farmy-v2-assets-lots-ethcoin-design.md)) |
 
 \* done by Person A's agent at the user's request; see the Decisions Log in [roadmap-B.md](farmy_blockchain/roadmap-B.md). Person B's manual tests: [test_person.md](farmy_blockchain/test_person.md).
 
 ## Tests
 
 ```bash
-cd farmy_blockchain && npm test   # 99 passing: registry 41 + payment 49 + integration 9
+cd farmy_blockchain && npx truffle test --network development   # 124 passing (contracts)
+cd farmy_web && npm test                                         # 34 passing (UI logic)
 ```
