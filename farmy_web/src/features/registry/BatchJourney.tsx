@@ -23,7 +23,10 @@ import { mined } from "@/lib/tx";
 import { useBatchView } from "@/lib/useBatchViews";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { CheckpointForm } from "./CheckpointForm";
+import { FamilyTree } from "./FamilyTree";
+import { HarvestForm } from "./HarvestForm";
 import type { HistoryItem } from "./registry";
+import { SplitForm } from "./SplitForm";
 import { useBatchDetail, useRegistry } from "./useRegistry";
 
 type Props = {
@@ -76,6 +79,7 @@ export function BatchJourney({ batchId, version, reload, saleStamps, salePanel }
           <Tag size="lg" batch={batch} chips={<BatchChips batch={batch} />} />
           <DetailsActions uri={batch.uri} hasDoc={hasDoc} batchId={batch.batchId} onVerified={() => setDocVersion((v) => v + 1)} />
           <NextStep batch={batch} onDone={reload} salePanel={salePanel} />
+          <FamilyTree batch={batch} version={version} />
         </div>
         <Card className="lg:col-span-7">
           <h2 className="mb-4 font-display text-xl font-bold">Journey</h2>
@@ -103,6 +107,7 @@ function NextStep({ batch, onDone, salePanel }: { batch: BatchView; onDone: () =
   return (
     <Card className="space-y-4">
       <h2 className="font-display text-xl font-bold">Next step</h2>
+      {batch.closed && <p className="text-sm text-ink-soft">This lot was split into smaller lots. Each one has its own journey: see the family tree.</p>}
       {!account || !isOnGanache ? (
         <p className="text-sm text-ink-soft">Choose who you are in the top right corner to act on this batch.</p>
       ) : (
@@ -145,15 +150,41 @@ function RegistryStep({ step, batch, onDone }: { step: Step; batch: BatchView; o
 
   if (step.action === "validate") {
     return (
-      <TxButton label="Validate batch" done="Batch validated" variant={variant} send={(signed) => mined(signed("BatchRegistry").validateBatch(batch.batchId))} onDone={onDone} />
+      <details className="rounded-xl border border-line p-3" open={step.primary}>
+        <summary className="cursor-pointer text-sm font-semibold">✅ Check and validate</summary>
+        <p className="mt-2 text-xs text-ink-soft">Your check is recorded first, then the {batch.kind} is validated, in one transaction.</p>
+        <div className="mt-3">
+          <CheckpointForm batchId={batch.batchId} validate onDone={onDone} />
+        </div>
+      </details>
     );
   }
   if (step.action === "addCheckpoint") {
     return (
       <details className="rounded-xl border border-line p-3">
-        <summary className="cursor-pointer text-sm font-semibold">📋 Add checkpoint</summary>
+        <summary className="cursor-pointer text-sm font-semibold">📋 Add a checkpoint only</summary>
         <div className="mt-3">
           <CheckpointForm batchId={batch.batchId} onDone={onDone} />
+        </div>
+      </details>
+    );
+  }
+  if (step.action === "harvest") {
+    return (
+      <details className="rounded-xl border border-line p-3">
+        <summary className="cursor-pointer text-sm font-semibold">🌾 Harvest a lot</summary>
+        <div className="mt-3">
+          <HarvestForm landId={batch.batchId} onDone={onDone} />
+        </div>
+      </details>
+    );
+  }
+  if (step.action === "split") {
+    return (
+      <details className="rounded-xl border border-line p-3">
+        <summary className="cursor-pointer text-sm font-semibold">✂️ Split into smaller lots</summary>
+        <div className="mt-3">
+          <SplitForm lot={batch} onDone={onDone} />
         </div>
       </details>
     );

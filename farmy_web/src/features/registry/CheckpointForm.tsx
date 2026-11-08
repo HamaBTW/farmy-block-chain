@@ -10,7 +10,7 @@ import { mined } from "@/lib/tx";
 const OTHER = "Other…";
 
 /** Inspector's check: the record stays in this browser, only its hash goes on-chain (no hand-typed hash). */
-export function CheckpointForm({ batchId, onDone }: { batchId: bigint; onDone: () => void }) {
+export function CheckpointForm({ batchId, onDone, validate = false }: { batchId: bigint; onDone: () => void; validate?: boolean }) {
   const [weightKg, setWeight] = useState("");
   const [temperatureC, setTemperature] = useState("4");
   const [location, setLocation] = useState(ORIGINS[0]);
@@ -36,8 +36,9 @@ export function CheckpointForm({ batchId, onDone }: { batchId: bigint; onDone: (
         <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Crates intact, no bruising" />
       </Field>
       <TxButton
-        label="Add checkpoint"
-        done="Checkpoint added"
+        label={validate ? "Check and validate" : "Add checkpoint"}
+        done={validate ? "Checked and validated" : "Checkpoint added"}
+        variant={validate ? "primary" : "secondary"}
         disabled={!weightKg.trim() || !temperatureC.trim() || !place}
         send={async (signed) => {
           const doc: CheckpointDoc = {
@@ -50,7 +51,8 @@ export function CheckpointForm({ batchId, onDone }: { batchId: bigint; onDone: (
             time: new Date().toISOString(),
           };
           saveDoc(doc);
-          await mined(signed("BatchRegistry").addCheckpoint(batchId, hashDoc(doc)));
+          const registry = signed("BatchRegistry");
+          await mined(validate ? registry.checkAndValidate(batchId, hashDoc(doc)) : registry.addCheckpoint(batchId, hashDoc(doc)));
         }}
         onDone={() => {
           setWeight("");
