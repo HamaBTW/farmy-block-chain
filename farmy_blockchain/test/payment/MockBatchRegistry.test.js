@@ -35,4 +35,10 @@ contract("MockBatchRegistry", ([seller, buyer, escrow, other]) => {
     await expectRevert(registry.custodianOf(2), "UnknownBatch(uint256)");
     await expectRevert(registry.recordSalePrice(2, frm(1), { from: escrow }), "UnknownBatch(uint256)");
   });
+
+  it("reports active until setActive(false)", async () => {
+    assert.isTrue(await registry.isActive(1)); // batch 1 is set up in the file's beforeEach
+    await registry.setActive(1, false);
+    assert.isFalse(await registry.isActive(1));
+  });
 });

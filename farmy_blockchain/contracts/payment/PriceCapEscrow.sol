@@ -58,6 +58,7 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
     error CustodyNotMoved();
     error NotAllowed();
     error ReleaseConditionsMet();
+    error NotActive();
 
     /// @notice Deploys the escrow with the deployer as market authority.
     /// @param registryAddress Deployed BatchRegistry.
@@ -80,11 +81,13 @@ contract PriceCapEscrow is Ownable, ReentrancyGuard {
     /// @param batchId The batch NFT id.
     /// @param price Sale price in FRM base units, at most lastPrice * (100 + markup) / 100.
     /// @return saleId Id of the new sale (starts at 1).
+    /// @dev Reverts NotActive for a lot that was split (closed).
     function createSale(uint256 batchId, uint256 price) external returns (uint256 saleId) {
         if (price == 0) revert ZeroPrice();
         uint256 openSaleId = _openSaleOf[batchId];
         if (openSaleId != 0) revert BatchAlreadyListed(openSaleId);
         if (_registry.custodianOf(batchId) != msg.sender) revert NotCustodian();
+        if (!_registry.isActive(batchId)) revert NotActive();
         uint256 cap = (_registry.getLastPrice(batchId) * (100 + uint256(_maxMarkupPercent))) / 100;
         if (price > cap) revert PriceAboveCap(price, cap);
 

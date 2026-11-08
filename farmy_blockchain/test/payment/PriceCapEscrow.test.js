@@ -117,6 +117,11 @@ contract("PriceCapEscrow", ([authority, seller, buyer, other]) => {
     it("reverts for an unknown batch (registry check)", async () => {
       await expectRevert(escrow.createSale(99, frm(100), { from: seller }), "UnknownBatch(uint256)");
     });
+
+    it("reverts for a lot that was split (closed)", async () => {
+      await registry.setActive(BATCH, false);
+      await expectRevert(escrow.createSale(BATCH, frm(110), { from: seller }), "NotActive()");
+    });
   });
 
   describe("deposit", () => {
