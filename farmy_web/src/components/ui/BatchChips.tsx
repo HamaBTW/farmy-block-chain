@@ -1,6 +1,6 @@
 import { getDoc } from "@/lib/docStore";
 import type { BatchView } from "@/lib/journeyData";
-import { hashFromUri, type AssetDoc } from "@/lib/metadata";
+import { hashFromUri, isAssetDoc, type AssetDoc } from "@/lib/metadata";
 import { Chip } from "./Chip";
 
 /** Validation, sale and split chips for an asset, in the status colors of DESIGN_SYSTEM.md §2. */
@@ -19,5 +19,5 @@ export function BatchChips({ batch }: { batch: BatchView }) {
 export function assetDocOf(uri: string): AssetDoc | null {
   const hash = hashFromUri(uri);
   const doc = hash ? getDoc(hash) : null;
-  return doc && doc.schema !== "farmy.checkpoint.v1" ? doc : null;
+  return doc && isAssetDoc(doc) ? doc : null;
 }

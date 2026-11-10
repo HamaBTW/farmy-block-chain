@@ -16,16 +16,45 @@ export type CheckpointDoc = {
 export type LandDoc = { schema: "farmy.land.v1"; name: string; location: string; areaHa: string };
 /** Machine description (registered by the regulator). */
 export type MachineDoc = { schema: "farmy.machine.v1"; name: string; model: string; year: string };
+/** Inspection of a land parcel: measured area and soil. Its hash is the `dataHash` of the check. */
+export type LandCheckDoc = { schema: "farmy.landcheck.v1"; batchId: string; areaHa: string; soil: string; location: string; note: string; time: string };
+/** Inspection of a machine: condition and hours used. */
+export type MachineCheckDoc = { schema: "farmy.machinecheck.v1"; batchId: string; condition: string; hours: string; location: string; note: string; time: string };
+/** Any inspector record: lots use CheckpointDoc (weight, temperature). */
+export type CheckDoc = CheckpointDoc | LandCheckDoc | MachineCheckDoc;
 /** Anything whose hash can be a token URI. */
 export type AssetDoc = BatchDoc | LandDoc | MachineDoc;
-export type FarmyDoc = AssetDoc | CheckpointDoc;
+export type FarmyDoc = AssetDoc | CheckDoc;
 
 const KEYS: Record<FarmyDoc["schema"], string[]> = {
   "farmy.land.v1": ["schema", "name", "location", "areaHa"],
   "farmy.machine.v1": ["schema", "name", "model", "year"],
   "farmy.batch.v1": ["schema", "product", "origin", "quantity", "unit", "harvestDate"],
   "farmy.checkpoint.v1": ["schema", "batchId", "weightKg", "temperatureC", "location", "note", "time"],
+  "farmy.landcheck.v1": ["schema", "batchId", "areaHa", "soil", "location", "note", "time"],
+  "farmy.machinecheck.v1": ["schema", "batchId", "condition", "hours", "location", "note", "time"],
 };
+
+const ASSET_SCHEMAS: AssetDoc["schema"][] = ["farmy.land.v1", "farmy.machine.v1", "farmy.batch.v1"];
+
+/** True for land, machine and lot details; false for inspector records. */
+export function isAssetDoc(doc: FarmyDoc): doc is AssetDoc {
+  return (ASSET_SCHEMAS as string[]).includes(doc.schema);
+}
+
+export const SOIL_STATES = ["Good", "Fair", "Poor"];
+export const MACHINE_STATES = ["Working", "Needs repair", "Out of service"];
+
+/** One line for a check stamp in the journey. */
+export function checkDetail(doc: CheckDoc): string {
+  const parts =
+    doc.schema === "farmy.landcheck.v1"
+      ? [`${doc.areaHa} ha measured`, `soil ${doc.soil.toLowerCase()}`]
+      : doc.schema === "farmy.machinecheck.v1"
+        ? [doc.condition.toLowerCase(), `${doc.hours} h used`]
+        : [`${doc.weightKg} kg`, `${doc.temperatureC} °C`];
+  return [...parts, doc.location, doc.note].filter(Boolean).join(" · ");
+}
 
 export const PRODUCTS = [
   { name: "Tomatoes", emoji: "🍅", unit: "kg" },

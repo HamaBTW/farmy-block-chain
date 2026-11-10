@@ -15,7 +15,7 @@ import { downloadDoc, getDoc, saveDoc } from "@/lib/docStore";
 import { formatFrm } from "@/lib/format";
 import { canDo, nextSteps, primaryStep, REGISTRY_ACTIONS, STEP_PHRASES, type Step } from "@/lib/journey";
 import type { BatchView, SaleContext } from "@/lib/journeyData";
-import { hashDoc, hashFromUri, parseDoc } from "@/lib/metadata";
+import { checkDetail, hashDoc, hashFromUri, isAssetDoc, parseDoc } from "@/lib/metadata";
 import { findPerson } from "@/lib/people";
 import { hasChainRole, usePeople } from "@/lib/people/PeopleProvider";
 import { personForWho } from "@/lib/people/resolveWho";
@@ -154,7 +154,7 @@ function RegistryStep({ step, batch, onDone }: { step: Step; batch: BatchView; o
         <summary className="cursor-pointer text-sm font-semibold">✅ Check and validate</summary>
         <p className="mt-2 text-xs text-ink-soft">Your check is recorded first, then the {batch.kind} is validated, in one transaction.</p>
         <div className="mt-3">
-          <CheckpointForm batchId={batch.batchId} validate onDone={onDone} />
+          <CheckpointForm batchId={batch.batchId} kind={batch.kind} validate onDone={onDone} />
         </div>
       </details>
     );
@@ -164,7 +164,7 @@ function RegistryStep({ step, batch, onDone }: { step: Step; batch: BatchView; o
       <details className="rounded-xl border border-line p-3">
         <summary className="cursor-pointer text-sm font-semibold">📋 Add a checkpoint only</summary>
         <div className="mt-3">
-          <CheckpointForm batchId={batch.batchId} onDone={onDone} />
+          <CheckpointForm batchId={batch.batchId} kind={batch.kind} onDone={onDone} />
         </div>
       </details>
     );
@@ -292,6 +292,5 @@ function registryStamps(history: HistoryItem[], id: bigint, unit: string): Stamp
 
 function checkpointDetail(dataHash: string): string {
   const doc = getDoc(dataHash);
-  if (doc?.schema !== "farmy.checkpoint.v1") return "Record kept off-chain";
-  return [`${doc.weightKg} kg`, `${doc.temperatureC} °C`, doc.location, doc.note].filter(Boolean).join(" · ");
+  return doc && !isAssetDoc(doc) ? checkDetail(doc) : "Record kept off-chain";
 }
